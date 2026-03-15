@@ -13,7 +13,9 @@
 - Deep expertise: market microstructure, overnight/extended-hours trading, ATS volume analysis, CAT (Consolidated Audit Trail), algorithmic trading
 - Writes extensively on: market structure, 24-hour trading, overnight alpha, liquidity, AI (DeepSeek analysis), fiscal policy
 - Veteran — chaired Veterans Council at Voya Financial (2022-2024)
-- Published thought leader on LinkedIn with regular articles on finance/markets/AI
+- Published thought leader on LinkedIn, Medium, and X on finance/markets/AI
+- Moderated TabbFORUM Conference on "Buy vs. Build ATS" (Feb 2025, NYC)
+- Medium article on ATS infrastructure strategy
 - Political/civic interests — runs FreeRangeDemocracy.com (commentary blog)
 
 ## Businesses (Sole Owner unless noted)
