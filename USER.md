@@ -5,25 +5,47 @@
 - **Pronouns:** he/him
 - **Timezone:** America/New_York (ET)
 - **Location:** 175 Sasco Hill Road, Fairfield, CT 06824
+- **LinkedIn:** linkedin.com/in/enricojcacciatore (~3K followers)
 
-## Businesses
+## Background
+- **Chief Product & Strategy Officer at CalcGuard Technologies** (co-founder, small ownership)
+- **Buy-Side Quantitative Trader of the Year** — 2018 Markets Choice Awards (Markets Media)
+- Deep expertise: market microstructure, overnight/extended-hours trading, ATS volume analysis, CAT (Consolidated Audit Trail), algorithmic trading
+- Writes extensively on: market structure, 24-hour trading, overnight alpha, liquidity, AI (DeepSeek analysis), fiscal policy
+- Veteran — chaired Veterans Council at Voya Financial (2022-2024)
+- Published thought leader on LinkedIn with regular articles on finance/markets/AI
+- Political/civic interests — runs FreeRangeDemocracy.com (commentary blog)
+
+## Businesses (Sole Owner unless noted)
+
+### CalcGuard Technologies (calcguard.com) — CO-FOUNDER, small ownership
+- FinTech / market surveillance / analytics
+- Likely tied to CAT, market structure, trade analytics
+- Rico is CPSO — product and strategy
 
 ### SAPInnovator (sapinnovator.com)
-- SAP consulting/innovation — site is live but light on content (just a cookie banner visible)
-- Needs content, SEO, lead generation work
+- Site is empty (cookie banner only)
+- Likely SAP consulting/innovation — needs Rico to confirm
 
 ### World Specialties (worldspecialties.com)
 - E-commerce marketplace — "Extraordinary Items from Around the World"
 - Curated artisan goods, direct-from-maker model
-- Has vendor application flow, ships worldwide
-- Needs: vendors, products, traffic, sales
+- Live with vendor application flow, ships worldwide
 
-### CalcGuard (calcguard.com)
-- Founder — site is on Vercel, couldn't fully load (security checkpoint)
-- Need Rico to describe what CalcGuard does
+### AlcyoneX (alcyonex.io)
+- Site is empty — needs Rico to explain
+
+### KeyLedger (keyledger.io)
+- Site is empty — needs Rico to explain
+
+### Free Range Democracy (freerangedemocracy.com)
+- Political commentary blog — "Independent analysis for a free society"
+- 3 articles from 2023, persona is "The Rooster"
+- Topics: govt/corporate power balance, civic accountability
 
 ## What Drives Rico
-- Entrepreneurial, action-oriented
+- Entrepreneurial, action-oriented, multi-venture builder
+- Deep finance/markets brain — quantitative, data-driven
 - Wants to maximize income across all ventures
 - Values: innovation, efficiency, speed, smart execution
 - Wants proactive money-making recommendations
