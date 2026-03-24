@@ -1,0 +1,720 @@
+// RangeKeeper — Prisma Schema
+// PostgreSQL + Prisma ORM
+// Designed for ASD/ADHD executive function assistant
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  STUDENT
+  PARENT
+  COACH
+  ADMIN
+}
+
+enum LMSType {
+  CANVAS
+  BLACKBOARD
+  GOOGLE_CLASSROOM
+  MANUAL
+}
+
+enum AssignmentType {
+  ESSAY
+  READING
+  PROBLEM_SET
+  PROJECT
+  EXAM
+  QUIZ
+  DISCUSSION
+  LAB
+  PRESENTATION
+  OTHER
+}
+
+enum MicroTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETE
+  SKIPPED
+  DEFERRED
+}
+
+enum TimeBlockType {
+  DEEP_WORK      // High cognitive load, needs full focus
+  LIGHT_WORK     // Lower cognitive load, can tolerate interruptions
+  BREAK          // Recovery time
+  TRANSITION     // Buffer between tasks (critical for ASD)
+  ADMIN          // Low-effort logistics (submitting, printing, etc.)
+  REVIEW         // Reviewing/checking completed work
+}
+
+enum NudgeLevel {
+  LEVEL_1   // Gentle reminder
+  LEVEL_2   // Specific action instruction
+  LEVEL_3   // Reframe + motivation
+  LEVEL_4   // Parent/coach alert triggered
+}
+
+enum NudgeStatus {
+  SCHEDULED
+  SENT
+  ACKNOWLEDGED
+  SNOOZED
+  CANCELLED
+}
+
+enum NudgeChannel {
+  SMS
+  PUSH
+  EMAIL
+  IN_APP
+}
+
+enum ParentPermission {
+  VIEW_PLAN        // See today's plan only
+  VIEW_PROGRESS    // See completion streaks and summaries
+  VIEW_ALERTS      // Receive non-completion alerts
+  FULL_DASHBOARD   // All of the above + upcoming deadlines
+}
+
+enum SyncStatus {
+  NEVER_SYNCED
+  SYNCING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ============================================================
+// USERS & AUTHENTICATION
+// ============================================================
+
+model User {
+  id                String          @id @default(cuid())
+  clerkId           String          @unique  // Clerk auth ID
+  email             String          @unique
+  phone             String?         // For SMS notifications
+  phoneVerified     Boolean         @default(false)
+  name              String
+  role              UserRole        @default(STUDENT)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?       // Soft delete
+
+  // Relations
+  studentProfile    StudentProfile?
+  parentLinks       ParentLink[]    @relation("ParentUser")
+  studentLinks      ParentLink[]    @relation("StudentUser")
+  lmsConnections    LMSConnection[]
+  calendarConnection CalendarConnection?
+  notificationPrefs NotificationPrefs?
+
+  @@index([clerkId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================================
+// STUDENT PROFILE
+// ============================================================
+
+model StudentProfile {
+  id                    String        @id @default(cuid())
+  userId                String        @unique
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Academic context
+  school                String        // e.g., "University of Michigan"
+  major                 String?
+  yearInSchool          String?       // Freshman, Sophomore, etc.
+  expectedGraduation    String?       // e.g., "May 2027"
+
+  // Timezone and scheduling
+  timezone              String        @default("America/New_York")
+  wakeUpTime            String        @default("08:00")  // HH:MM format
+  sleepTime             String        @default("23:00")
+  planDeliveryTime      String        @default("07:00")  // When to send morning plan
+
+  // Energy and cognitive preferences
+  peakEnergyMorning     Boolean       @default(true)   // True = morning person
+  peakEnergyBlocks      String[]      @default(["09:00-11:00", "14:00-16:00"])
+  maxDeepWorkMinutes    Int           @default(45)     // Max continuous focus block
+  preferredBreakMinutes Int           @default(10)     // Break duration between blocks
+  transitionBufferMin   Int           @default(5)      // Buffer between tasks
+
+  // ASD/ADHD specific preferences
+  sensoryProfile        Json?         // { lowContrast: bool, reducedMotion: bool, fontSize: string }
+  taskInitiationSupport Boolean       @default(true)   // Send "just start" micro-prompts
+  transitionWarnings    Boolean       @default(true)   // Warn 5 min before task switch
+  predictableStructure  Boolean       @default(true)   // Same plan format daily
+  celebrationStyle      String        @default("emoji") // emoji | minimal | verbose
+
+  // Academic preferences
+  preferredWorkDays     String[]      @default(["Mon", "Tue", "Wed", "Thu", "Fri"])
+  avoidLastMinute       Boolean       @default(true)   // Prefer to finish 1 day early
+  bufferBeforeDue       Int           @default(24)     // Hours before due date to target completion
+
+  // Onboarding
+  onboardingCompleted   Boolean       @default(false)
+  lmsType               LMSType       @default(MANUAL)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  courses               Course[]
+  dailyPlans            DailyPlan[]
+  completionLogs        CompletionLog[]
+
+  @@map("student_profiles")
+}
+
+// ============================================================
+// NOTIFICATION PREFERENCES
+// ============================================================
+
+model NotificationPrefs {
+  id                    String        @id @default(cuid())
+  userId                String        @unique
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Channel preferences
+  smsEnabled            Boolean       @default(true)
+  pushEnabled           Boolean       @default(true)
+  emailEnabled          Boolean       @default(false)  // Default off — reduce noise
+
+  // Nudge preferences
+  nudgesEnabled         Boolean       @default(true)
+  nudgeMinGapMinutes    Int           @default(20)     // Min time between nudges
+  maxNudgesPerDay       Int           @default(8)
+  escalationEnabled     Boolean       @default(true)
+
+  // Quiet hours (respect these absolutely)
+  quietHoursStart       String        @default("22:00")
+  quietHoursEnd         String        @default("08:00")
+
+  // Specific notification types
+  morningPlanEnabled    Boolean       @default(true)
+  taskStartReminders    Boolean       @default(true)
+  transitionAlerts      Boolean       @default(true)
+  winCelebrations       Boolean       @default(true)
+  eveningSummary        Boolean       @default(true)
+  parentAlertThreshold  Int           @default(2)      // Skipped tasks before parent alert
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("notification_prefs")
+}
+
+// ============================================================
+// LMS INTEGRATION
+// ============================================================
+
+model LMSConnection {
+  id                    String        @id @default(cuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lmsType               LMSType
+  schoolDomain          String        // e.g., "umich.instructure.com"
+  lmsUserId             String?       // User ID within the LMS
+  lmsUserName           String?
+
+  // OAuth tokens (encrypted at application layer before storing)
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  tokenExpiresAt        DateTime?
+
+  // Sync state
+  syncStatus            SyncStatus    @default(NEVER_SYNCED)
+  lastSyncAt            DateTime?
+  lastSyncError         String?
+  syncFailureCount      Int           @default(0)
+
+  // LMS-specific metadata
+  metadata              Json?         // School-specific config, API quirks
+
+  isActive              Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  courses               Course[]
+
+  @@unique([userId, lmsType, schoolDomain])
+  @@index([userId])
+  @@map("lms_connections")
+}
+
+// ============================================================
+// GOOGLE CALENDAR / GMAIL
+// ============================================================
+
+model CalendarConnection {
+  id                    String        @id @default(cuid())
+  userId                String        @unique
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  googleUserId          String?
+  googleEmail           String?
+
+  // OAuth tokens (encrypted at application layer)
+  encryptedAccessToken  String?
+  encryptedRefreshToken String?
+  tokenExpiresAt        DateTime?
+
+  // Scopes granted
+  calendarScope         Boolean       @default(false)
+  gmailScope            Boolean       @default(false)
+  classroomScope        Boolean       @default(false)
+
+  // Sync state
+  syncStatus            SyncStatus    @default(NEVER_SYNCED)
+  lastCalendarSync      DateTime?
+  calendarSyncError     String?
+
+  // Settings
+  writeFocusBlocks      Boolean       @default(false) // Create focus time events on student's calendar
+  primaryCalendarId     String        @default("primary")
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("calendar_connections")
+}
+
+// ============================================================
+// COURSES
+// ============================================================
+
+model Course {
+  id                    String        @id @default(cuid())
+  studentProfileId      String
+  studentProfile        StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  lmsConnectionId       String?
+  lmsConnection         LMSConnection? @relation(fields: [lmsConnectionId], references: [id])
+
+  // LMS identifiers
+  lmsCourseId           String?       // ID in the LMS
+  lmsType               LMSType       @default(MANUAL)
+
+  // Course info
+  name                  String
+  code                  String?       // e.g., "PSYCH 201"
+  instructor            String?
+  description           String?
+  term                  String?       // e.g., "Spring 2026"
+  startDate             DateTime?
+  endDate               DateTime?
+
+  // Student's assessment of course difficulty
+  difficultyRating      Int?          @default(3) // 1-5, student-set
+  creditHours           Float?
+
+  // Display
+  color                 String?       @default("#6366f1") // For calendar display
+  isActive              Boolean       @default(true)
+
+  lastSyncAt            DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  assignments           Assignment[]
+
+  @@unique([studentProfileId, lmsCourseId, lmsType])
+  @@index([studentProfileId])
+  @@map("courses")
+}
+
+// ============================================================
+// ASSIGNMENTS
+// ============================================================
+
+model Assignment {
+  id                    String        @id @default(cuid())
+  courseId              String
+  course                Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // LMS identifiers
+  lmsAssignmentId       String?
+  lmsType               LMSType       @default(MANUAL)
+
+  // Assignment details
+  title                 String
+  description           String?       // Full assignment description from LMS
+  type                  AssignmentType @default(OTHER)
+  dueDate               DateTime?
+  availableFrom         DateTime?     // When assignment opens
+
+  // Academic weight
+  pointsPossible        Float?
+  weight                Float?        // Percentage of final grade (0-100)
+
+  // AI-computed estimates
+  estimatedTotalMinutes Int?          // AI estimate of total work time
+  estimatedDifficulty   Int?          // 1-10 AI difficulty rating
+  urgencyScore          Float?        // 0-100, recomputed periodically
+  urgencyLastUpdated    DateTime?
+
+  // Status
+  isSubmitted           Boolean       @default(false)
+  submittedAt           DateTime?
+  grade                 Float?
+
+  // Decomposition state
+  isDecomposed          Boolean       @default(false)
+  decomposedAt          DateTime?
+  decompositionVersion  String?       // Prompt version used
+
+  // Metadata
+  lmsUrl                String?       // Direct link to assignment in LMS
+  attachments           Json?         // Array of attachment metadata
+  rubric                Json?         // Rubric if provided by instructor
+  metadata              Json?         // LMS-specific extra fields
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  microTasks            MicroTask[]
+  timeBlocks            TimeBlock[]
+
+  @@unique([courseId, lmsAssignmentId, lmsType])
+  @@index([courseId])
+  @@index([dueDate])
+  @@index([urgencyScore])
+  @@map("assignments")
+}
+
+// ============================================================
+// MICRO-TASKS (AI-decomposed steps)
+// ============================================================
+
+model MicroTask {
+  id                    String          @id @default(cuid())
+  assignmentId          String
+  assignment            Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  // Task definition
+  title                 String          // Short, action-oriented title
+  description           String?         // What exactly to do (specific, not vague)
+  startInstruction      String?         // The "just open X and do Y" first action
+  sequence              Int             // Order within the assignment (1, 2, 3...)
+
+  // Time estimates
+  estimatedMinutes      Int             // AI-estimated duration
+  actualMinutes         Int?            // Actual time spent (from timer or student input)
+
+  // Classification
+  taskType              TimeBlockType   @default(DEEP_WORK)
+  requiresInternet      Boolean         @default(false)
+  requiresPhysicalSpace String?         // "library", "lab", "quiet room"
+  prerequisiteMicroTaskId String?       // Must complete this task first
+  prerequisiteTask      MicroTask?      @relation("MicroTaskPrereqs", fields: [prerequisiteMicroTaskId], references: [id])
+  dependentTasks        MicroTask[]     @relation("MicroTaskPrereqs")
+
+  // Status
+  status                MicroTaskStatus @default(PENDING)
+  startedAt             DateTime?
+  completedAt           DateTime?
+  deferredUntil         DateTime?
+  deferralReason        String?
+
+  // Scheduling
+  scheduledDate         DateTime?       // Which day is this planned for
+  scheduledStart        DateTime?       // Specific start time if scheduled
+
+  // AI metadata
+  aiNotes               String?         // AI reasoning for this decomposition
+  promptVersion         String?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Relations
+  timeBlocks            TimeBlock[]
+  nudges                Nudge[]
+  completionLogs        CompletionLog[]
+
+  @@index([assignmentId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("micro_tasks")
+}
+
+// ============================================================
+// DAILY PLAN
+// ============================================================
+
+model DailyPlan {
+  id                    String        @id @default(cuid())
+  studentProfileId      String
+  studentProfile        StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+
+  planDate              DateTime      @db.Date  // The day this plan is for
+  generatedAt           DateTime      @default(now())
+  promptVersion         String?       // Which AI prompt version was used
+
+  // Plan metadata
+  totalWorkMinutes      Int           @default(0)
+  totalBreakMinutes     Int           @default(0)
+  tasksScheduled        Int           @default(0)
+  tasksCompleted        Int           @default(0)
+
+  // Delivery status
+  deliveredAt           DateTime?     // When morning plan was sent to student
+  deliveryChannel       NudgeChannel?
+
+  // Plan narrative (AI-generated summary)
+  morningMessage        String?       // "Today you've got 3 things. Here's the plan."
+  aiPlanRationale       String?       // Internal AI reasoning (not shown to student)
+
+  // Student interaction
+  studentAcknowledged   Boolean       @default(false)
+  acknowledgedAt        DateTime?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  timeBlocks            TimeBlock[]
+
+  @@unique([studentProfileId, planDate])
+  @@index([studentProfileId])
+  @@index([planDate])
+  @@map("daily_plans")
+}
+
+// ============================================================
+// TIME BLOCKS (parts of a daily plan)
+// ============================================================
+
+model TimeBlock {
+  id                    String        @id @default(cuid())
+  dailyPlanId           String
+  dailyPlan             DailyPlan     @relation(fields: [dailyPlanId], references: [id], onDelete: Cascade)
+
+  // Optional link to specific task
+  microTaskId           String?
+  microTask             MicroTask?    @relation(fields: [microTaskId], references: [id])
+  assignmentId          String?
+  assignment            Assignment?   @relation(fields: [assignmentId], references: [id])
+
+  // Block definition
+  sequence              Int           // Order in the day
+  blockType             TimeBlockType
+  title                 String        // e.g., "Read Chapter 4 — Psych 201"
+  description           String?       // What to do in this block
+  startInstruction      String?       // The very first action to take
+
+  // Timing
+  startTime             DateTime      // Absolute start time (date + time)
+  endTime               DateTime
+  durationMinutes       Int
+
+  // Status
+  isComplete            Boolean       @default(false)
+  isSkipped             Boolean       @default(false)
+  completedAt           DateTime?
+  skippedAt             DateTime?
+  skippedReason         String?
+
+  // Nudge tracking
+  startNudgeSent        Boolean       @default(false)
+  transitionNudgeSent   Boolean       @default(false)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  nudges                Nudge[]
+
+  @@index([dailyPlanId])
+  @@index([microTaskId])
+  @@index([startTime])
+  @@map("time_blocks")
+}
+
+// ============================================================
+// NUDGES
+// ============================================================
+
+model Nudge {
+  id                    String        @id @default(cuid())
+
+  // Who gets nudged
+  userId                String        // FK to User
+  microTaskId           String?
+  microTask             MicroTask?    @relation(fields: [microTaskId], references: [id])
+  timeBlockId           String?
+  timeBlock             TimeBlock?    @relation(fields: [timeBlockId], references: [id])
+
+  // Nudge content
+  channel               NudgeChannel
+  level                 NudgeLevel    @default(LEVEL_1)
+  message               String        // The actual message text
+  promptVersion         String?       // Nudge prompt version
+
+  // Scheduling
+  scheduledFor          DateTime      // When to fire this nudge
+  status                NudgeStatus   @default(SCHEDULED)
+
+  // Delivery
+  sentAt                DateTime?
+  deliveryId            String?       // Twilio message SID or push notification ID
+  deliveryError         String?
+
+  // Student response
+  acknowledgedAt        DateTime?
+  snoozedUntil          DateTime?
+  snoozeCount           Int           @default(0)
+  studentResponse       String?       // Raw text response if SMS
+
+  // Escalation tracking
+  escalationOf          String?       // ID of prior nudge this escalated from
+  isEscalated           Boolean       @default(false)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@map("nudges")
+}
+
+// ============================================================
+// COMPLETION LOG (Win Tracking)
+// ============================================================
+
+model CompletionLog {
+  id                    String        @id @default(cuid())
+  studentProfileId      String
+  studentProfile        StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  microTaskId           String?
+  microTask             MicroTask?    @relation(fields: [microTaskId], references: [id])
+
+  // What was completed
+  title                 String        // Human-readable description of the win
+  taskType              TimeBlockType?
+  courseName            String?       // Denormalized for easy win display
+
+  // Timing
+  completedAt           DateTime      @default(now())
+  minutesActual         Int?          // How long it actually took
+  minutesEstimated      Int?          // What was estimated
+
+  // Streak tracking
+  dayStreak             Int           @default(0)    // Consecutive days with completions
+  weekStreak            Int           @default(0)    // Consecutive weeks
+  tasksCompletedToday   Int           @default(1)    // Running count for the day
+
+  // Celebration
+  celebrationSent       Boolean       @default(false)
+  celebrationMessage    String?       // The win message that was sent
+
+  // Context
+  wasOnTime             Boolean       @default(true) // Completed before deadline
+  wasOnSchedule         Boolean       @default(true) // Completed within scheduled block
+
+  createdAt             DateTime      @default(now())
+
+  @@index([studentProfileId])
+  @@index([completedAt])
+  @@map("completion_logs")
+}
+
+// ============================================================
+// PARENT / COACH LINKS
+// ============================================================
+
+model ParentLink {
+  id                    String            @id @default(cuid())
+  parentUserId          String
+  parentUser            User              @relation("ParentUser", fields: [parentUserId], references: [id], onDelete: Cascade)
+  studentUserId         String
+  studentUser           User              @relation("StudentUser", fields: [studentUserId], references: [id], onDelete: Cascade)
+
+  // Permission level
+  permissions           ParentPermission[]
+
+  // Link status
+  isActive              Boolean           @default(true)
+  inviteCode            String?           @unique   // Code student uses to approve link
+  inviteAccepted        Boolean           @default(false)
+  inviteAcceptedAt      DateTime?
+  inviteSentAt          DateTime?
+
+  // Notification settings for parent
+  parentSmsEnabled      Boolean           @default(true)
+  parentEmailEnabled    Boolean           @default(true)
+  alertOnMissedTasks    Boolean           @default(true)
+  alertThreshold        Int               @default(2) // Missed tasks before alert
+
+  // Relationship type
+  relationship          String?           // "parent", "coach", "therapist", "advisor"
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@unique([parentUserId, studentUserId])
+  @@index([studentUserId])
+  @@map("parent_links")
+}
+
+// ============================================================
+// SYSTEM / OPERATIONAL
+// ============================================================
+
+model JobLog {
+  id                    String        @id @default(cuid())
+  jobType               String        // e.g., "lms-sync", "plan-generator"
+  jobId                 String?       // BullMQ job ID
+  userId                String?       // If job is user-scoped
+  status                String        // "success" | "failed" | "partial"
+  durationMs            Int?
+  recordsProcessed      Int?
+  errorMessage          String?
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+
+  @@index([jobType])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("job_logs")
+}
+
+model AuditLog {
+  id                    String        @id @default(cuid())
+  userId                String?
+  action                String        // e.g., "parent.link.created", "lms.token.refreshed"
+  resource              String?       // e.g., "ParentLink:abc123"
+  ipAddress             String?
+  userAgent             String?
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

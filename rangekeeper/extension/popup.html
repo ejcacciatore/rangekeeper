@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RangeKeeper</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 RangeKeeper</h1>
+      <p class="subtitle">Your academic success companion</p>
+    </header>
+
+    <section class="summary">
+      <div class="stat">
+        <span class="stat-value" id="courses-count">-</span>
+        <span class="stat-label">Courses</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="assignments-count">-</span>
+        <span class="stat-label">Assignments</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="due-soon-count">-</span>
+        <span class="stat-label">Due Soon</span>
+      </div>
+    </section>
+
+    <section class="upcoming">
+      <h2>📅 Upcoming Assignments</h2>
+      <div id="assignments-list" class="assignments-list">
+        <p class="empty-state">No assignments found. Visit Blackboard to sync.</p>
+      </div>
+    </section>
+
+    <section class="courses">
+      <h2>📚 Your Courses</h2>
+      <div id="courses-list" class="courses-list">
+        <p class="empty-state">No courses found. Visit Blackboard to sync.</p>
+      </div>
+    </section>
+
+    <footer>
+      <button id="sync-btn" class="btn-primary">🔄 Sync Now</button>
+      <p class="last-sync">Last synced: <span id="last-sync-time">Never</span></p>
+    </footer>
+  </div>
+
+  <script src="scripts/popup.js"></script>
+</body>
+</html>
