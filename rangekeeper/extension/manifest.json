@@ -11,6 +11,8 @@
   ],
   "host_permissions": [
     "https://ualearn.blackboard.com/*",
+    "https://*.blackboard.com/*",
+    "https://*.cstp.blackboard.com/*",
     "http://localhost:3000/*"
   ],
   "background": {
@@ -18,7 +20,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://ualearn.blackboard.com/*"],
+      "matches": [
+        "https://ualearn.blackboard.com/*",
+        "https://*.blackboard.com/*",
+        "https://*.cstp.blackboard.com/*"
+      ],
       "js": [
         "scripts/utils.js",
         "scripts/grades-scraper.js",
@@ -31,7 +37,11 @@
   "web_accessible_resources": [
     {
       "resources": ["scripts/utils.js"],
-      "matches": ["https://ualearn.blackboard.com/*"]
+      "matches": [
+        "https://ualearn.blackboard.com/*",
+        "https://*.blackboard.com/*",
+        "https://*.cstp.blackboard.com/*"
+      ]
     }
   ],
   "action": {
