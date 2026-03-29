@@ -1,36 +1,19 @@
 /**
  * RangeKeeper Content Script
  * Runs on ualearn.blackboard.com
- * Scrapes course data, assignments, grades, and calendar items
+ * 
+ * Scrapes: Courses, Assignments, Grades, Messages, Feedback
+ * 
+ * Page detection → appropriate scraper → IndexedDB → backend sync → notifications
  */
 
-console.log('[RangeKeeper] Content script loaded');
+console.log('[RangeKeeper] Content script loaded on:', window.location.href);
 
 // ============================================================================
-// CONFIGURATION - FIXED FOR UA BLACKBOARD ULTRA
+// CONFIGURATION
 // ============================================================================
 
-const SELECTORS = {
-  // Course list (Ultra dashboard) - Based on actual UA DOM structure
-  coursesContainer: 'main#main-content',
-  courseCard: 'li[class*="MultiListroot"]', // Each course is an <li> with MultiListroot class
-  courseName: 'p[class*="Multypographybody"]', // Course name in <p> tag
-  courseLink: 'a[href*="/ultra/course"]', // Link to course
-  
-  // Assignment list (from Activity stream or course content)
-  activityItem: 'div[class*="base-navigation"]', // Activity stream items
-  assignmentTitle: '[class*="base-navigation-button-content"]',
-  
-  // Calendar view
-  calendarContainer: 'main#main-content',
-  calendarEvent: 'div[role="button"]', // Calendar events are divs with role="button"
-  
-  // Grades
-  gradeItem: 'div[class*="grade"]',
-  gradeScore: 'span[class*="score"]',
-};
-
-const BACKEND_URL = 'http://localhost:3000'; // Will be Railway URL in production
+const BACKEND_URL = 'http://localhost:3000'; // TODO: Replace with production URL
 
 // ============================================================================
 // STATE
@@ -40,207 +23,211 @@ let scrapedData = {
   courses: [],
   assignments: [],
   grades: [],
-  announcements: [],
+  messages: [],
+  feedback: [],
   lastScraped: null
 };
 
-// Current page type detection
 let currentPage = null;
+let lastUrl = window.location.href;
 
 // ============================================================================
-// PAGE DETECTION
+// PAGE DETECTION — UA BLACKBOARD ULTRA
 // ============================================================================
 
 function detectPage() {
   const url = window.location.href;
-  const pathname = window.location.pathname;
-  
-  if (url.includes('/ultra/course') && !url.includes('/outline')) {
-    return 'courses-list';
-  } else if (url.includes('/ultra/calendar')) {
-    return 'calendar';
-  } else if (url.includes('/webapps/streamViewer')) {
+  const path = window.location.pathname;
+  const hash = window.location.hash;
+
+  // Ultra-style routes (SPA with hash routing)
+  if (url.includes('/ultra/stream') || url.includes('/webapps/streamViewer')) {
     return 'activity-stream';
-  } else if (url.includes('/ultra/grades')) {
-    return 'grades';
-  } else if (url.includes('/ultra/course') && url.includes('/outline')) {
-    return 'course-content';
   }
   
+  // Course grades page (inside a specific course)
+  if (url.includes('/ultra/courses/') && (url.includes('/grades') || hash.includes('grades'))) {
+    return 'course-grades';
+  }
+  
+  // Overall grades page
+  if (url.includes('/ultra/grades') && !url.includes('/courses/')) {
+    return 'grades-overview';
+  }
+
+  // Messages landing page (list of courses with unread counts)
+  if (url.includes('/ultra/messages') && !url.includes('course_id')) {
+    return 'messages-landing';
+  }
+
+  // Course message list (messages within a specific course)
+  if (url.includes('viewCourseMessages') || url.includes('courseMessages') ||
+      (url.includes('/ultra/messages') && url.includes('course'))) {
+    return 'course-messages';
+  }
+
+  // Message detail view
+  if (url.includes('do/message') || url.includes('messageDetail') ||
+      (url.includes('/message/') && url.includes('/ultra/'))) {
+    return 'message-detail';
+  }
+
+  // Grade/attempt detail (feedback view)
+  if (url.includes('/attempt/') || url.includes('attemptId') || 
+      url.includes('/grades/') && url.includes('/columns/')) {
+    return 'grade-detail';
+  }
+
+  // Course content/outline
+  if (url.includes('/ultra/courses/') && url.includes('/outline')) {
+    return 'course-content';
+  }
+
+  // Course list (Courses page)
+  if (url.includes('/ultra/course') && !url.includes('/courses/')) {
+    return 'courses-list';
+  }
+
+  // Deadline/calendar
+  if (url.includes('/ultra/calendar') || url.includes('/ultra/deadline')) {
+    return 'calendar';
+  }
+
+  // Any page inside a course
+  if (url.includes('/ultra/courses/')) {
+    return 'course-page';
+  }
+
   return 'unknown';
 }
 
 // ============================================================================
-// SCRAPERS - UA BLACKBOARD ULTRA SPECIFIC
+// SCRAPERS — COURSES
 // ============================================================================
 
-/**
- * Scrape course list from Courses page
- * Based on actual UA DOM: <li class="MultiListroot..."> containing <p> for name
- */
 function scrapeCourses() {
-  console.log('[RangeKeeper] Scraping courses from UA Blackboard Ultra...');
-  
-  const courseItems = document.querySelectorAll('li[class*="MultiListroot"]');
+  console.log('[RangeKeeper] Scraping courses...');
   const courses = [];
-  
-  console.log(`[RangeKeeper] Found ${courseItems.length} potential course items`);
-  
+
+  const courseItems = document.querySelectorAll('li[class*="MultiListroot"]');
+  console.log(`[RangeKeeper] Found ${courseItems.length} course items via MultiListroot`);
+
   courseItems.forEach((item, index) => {
     try {
-      // Find the link to the course
       const link = item.querySelector('a[href*="/ultra/course"]');
-      if (!link) {
-        console.log(`[RangeKeeper] Course item ${index}: No course link found`);
-        return;
-      }
-      
-      // Extract course ID from URL
+      if (!link) return;
+
       const url = link.getAttribute('href');
       const courseIdMatch = url.match(/\/course\/([^\/\?]+)/);
       const courseId = courseIdMatch ? courseIdMatch[1] : null;
-      
-      if (!courseId) {
-        console.log(`[RangeKeeper] Course item ${index}: Could not extract course ID from ${url}`);
-        return;
-      }
-      
-      // Find course name - look for <p> tags with Multypography class
+      if (!courseId) return;
+
       const nameElements = item.querySelectorAll('p[class*="Multypography"]');
+      let courseCode = null;
       let courseName = null;
-      
-      // First <p> is usually the course code (e.g., "202610-EN-103-025")
-      // Second <p> is usually the full name
+
       if (nameElements.length >= 2) {
-        const courseCode = nameElements[0].textContent.trim();
-        const courseLongName = nameElements[1].textContent.trim();
-        courseName = `${courseCode} - ${courseLongName}`;
+        courseCode = nameElements[0].textContent.trim();
+        courseName = nameElements[1].textContent.trim();
       } else if (nameElements.length === 1) {
-        courseName = nameElements[0].textContent.trim();
+        courseCode = nameElements[0].textContent.trim();
+        courseName = courseCode;
       } else {
-        // Fallback: try any text content
         courseName = item.textContent.trim().substring(0, 100);
       }
-      
-      console.log(`[RangeKeeper] Course ${index}: ${courseName} (${courseId})`);
-      
+
       courses.push({
         id: courseId,
+        code: courseCode,
         name: courseName,
+        fullName: courseCode ? `${courseCode} — ${courseName}` : courseName,
         url: url.startsWith('http') ? url : `https://ualearn.blackboard.com${url}`,
         scrapedAt: Date.now()
       });
     } catch (err) {
-      console.error('[RangeKeeper] Error scraping course item:', err);
+      console.error('[RangeKeeper] Error scraping course:', err);
     }
   });
-  
-  console.log(`[RangeKeeper] Successfully scraped ${courses.length} courses`);
+
+  // Fallback: try other selectors
+  if (courses.length === 0) {
+    const links = document.querySelectorAll('a[href*="/ultra/course"]');
+    links.forEach((link, idx) => {
+      const url = link.getAttribute('href');
+      const name = link.textContent.trim();
+      if (name.length > 3) {
+        courses.push({
+          id: `course_${idx}`,
+          name: name,
+          fullName: name,
+          url: url.startsWith('http') ? url : `https://ualearn.blackboard.com${url}`,
+          scrapedAt: Date.now()
+        });
+      }
+    });
+  }
+
+  console.log(`[RangeKeeper] Scraped ${courses.length} courses`);
   return courses;
 }
 
-/**
- * Scrape assignments from Activity stream or course content
- */
+// ============================================================================
+// SCRAPERS — ASSIGNMENTS
+// ============================================================================
+
 function scrapeAssignments() {
   console.log('[RangeKeeper] Scraping assignments...');
-  
-  // Look for activity stream items
-  const activityItems = document.querySelectorAll('div[class*="base-navigation"]');
   const assignments = [];
-  
-  console.log(`[RangeKeeper] Found ${activityItems.length} activity items`);
-  
+
+  // Activity stream items
+  const activityItems = document.querySelectorAll(
+    'div[class*="base-navigation"], [class*="stream-item"], div[role="article"]'
+  );
+
   activityItems.forEach((item, index) => {
     try {
-      const content = item.querySelector('[class*="base-navigation-button-content"]');
-      if (!content) return;
-      
-      const text = content.textContent.trim();
-      
-      // Look for assignment indicators
-      if (text.toLowerCase().includes('due') || 
-          text.toLowerCase().includes('assignment') || 
-          text.toLowerCase().includes('submit')) {
-        
-        // Try to extract due date
-        const dueDateMatch = text.match(/due:?\s*([^·]+)/i);
+      const text = (item.textContent || '').trim();
+
+      // Look for assignment/due date patterns
+      if (text.toLowerCase().includes('due') ||
+          text.toLowerCase().includes('assignment') ||
+          text.toLowerCase().includes('submit') ||
+          text.toLowerCase().includes('quiz') ||
+          text.toLowerCase().includes('test')) {
+
+        const courseMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+        const courseId = courseMatch ? courseMatch[1] : null;
+
+        // Extract due date
+        const dueDateMatch = text.match(
+          /due:?\s*([A-Z][a-z]{2}\s+\d{1,2}(?:,\s*\d{4})?\s+(?:at\s+)?\d{1,2}:\d{2}\s*(?:AM|PM)?)/i
+        ) || text.match(/due:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
         const dueDate = dueDateMatch ? dueDateMatch[1].trim() : null;
-        
+
+        const title = text.split('·')[0].split('\n')[0].trim().substring(0, 100);
+
+        let status = 'pending';
+        if (/past due|overdue/i.test(text)) status = 'overdue';
+        else if (/submitted/i.test(text)) status = 'submitted';
+        else if (/graded/i.test(text)) status = 'graded';
+
         assignments.push({
-          id: `activity-${index}`,
-          title: text.split('·')[0].trim(), // First part before separator
-          dueDate: dueDate,
-          status: text.toLowerCase().includes('past due') ? 'overdue' : 'pending',
+          id: `assignment_${courseId || ''}_${index}`,
+          courseId: courseId,
+          title: title,
+          dueDate: dueDate ? (typeof parseDueDate === 'function' ? parseDueDate(dueDate) : dueDate) : null,
+          status: status,
+          source: 'activity-stream',
           scrapedAt: Date.now()
         });
       }
     } catch (err) {
-      console.error('[RangeKeeper] Error scraping activity item:', err);
+      console.error('[RangeKeeper] Error scraping assignment:', err);
     }
   });
-  
-  console.log(`[RangeKeeper] Found ${assignments.length} assignments`);
+
+  console.log(`[RangeKeeper] Scraped ${assignments.length} assignments`);
   return assignments;
-}
-
-/**
- * Scrape calendar events
- */
-function scrapeCalendar() {
-  console.log('[RangeKeeper] Scraping calendar...');
-  
-  // Calendar events are typically divs with role="button"
-  const calendarItems = document.querySelectorAll('div[role="button"][class*="calendar"]');
-  const events = [];
-  
-  console.log(`[RangeKeeper] Found ${calendarItems.length} calendar items`);
-  
-  calendarItems.forEach((item, index) => {
-    try {
-      const text = item.textContent.trim();
-      if (!text) return;
-      
-      events.push({
-        id: `calendar-${index}`,
-        title: text,
-        scrapedAt: Date.now()
-      });
-    } catch (err) {
-      console.error('[RangeKeeper] Error scraping calendar item:', err);
-    }
-  });
-  
-  console.log(`[RangeKeeper] Found ${events.length} calendar events`);
-  return events;
-}
-
-/**
- * Scrape grades
- */
-function scrapeGrades() {
-  console.log('[RangeKeeper] Scraping grades...');
-  
-  const gradeItems = document.querySelectorAll(SELECTORS.gradeItem);
-  const grades = [];
-  
-  gradeItems.forEach(item => {
-    try {
-      const scoreEl = item.querySelector(SELECTORS.gradeScore);
-      if (!scoreEl) return;
-      
-      grades.push({
-        id: `grade-${Date.now()}-${Math.random()}`,
-        score: scoreEl.textContent.trim(),
-        scrapedAt: Date.now()
-      });
-    } catch (err) {
-      console.error('[RangeKeeper] Error scraping grade item:', err);
-    }
-  });
-  
-  console.log(`[RangeKeeper] Found ${grades.length} grades`);
-  return grades;
 }
 
 // ============================================================================
@@ -249,46 +236,55 @@ function scrapeGrades() {
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('RangeKeeperDB', 1);
-    
+    const request = indexedDB.open('RangeKeeperDB', 3);
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      
-      if (!db.objectStoreNames.contains('courses')) {
-        db.createObjectStore('courses', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('assignments')) {
-        db.createObjectStore('assignments', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('grades')) {
-        db.createObjectStore('grades', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('settings')) {
-        db.createObjectStore('settings', { keyPath: 'key' });
-      }
+      const stores = ['courses', 'assignments', 'grades', 'messages', 'feedback', 'settings'];
+      stores.forEach(name => {
+        if (!db.objectStoreNames.contains(name)) {
+          db.createObjectStore(name, { keyPath: 'id' });
+        }
+      });
     };
   });
 }
 
 async function saveToIndexedDB(storeName, data) {
+  if (!data || data.length === 0) return;
   try {
     const db = await openDB();
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
-    
-    // Clear existing data
-    store.clear();
-    
-    // Add new data
+
+    // Merge with existing data (don't clear — accumulate across pages)
     data.forEach(item => store.put(item));
-    
-    await tx.complete;
-    console.log(`[RangeKeeper] Saved ${data.length} items to ${storeName}`);
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (err) {
-    console.error(`[RangeKeeper] Error saving to IndexedDB:`, err);
+    console.error(`[RangeKeeper] Error saving to ${storeName}:`, err);
+  }
+}
+
+async function getAllFromDB(storeName) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.error(`[RangeKeeper] Error reading from ${storeName}:`, err);
+    return [];
   }
 }
 
@@ -303,109 +299,257 @@ async function syncToBackend(data) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    
-    if (!response.ok) {
-      throw new Error(`Backend sync failed: ${response.status}`);
-    }
-    
+
+    if (!response.ok) throw new Error(`Sync failed: ${response.status}`);
     const result = await response.json();
-    console.log('[RangeKeeper] Synced to backend:', result);
+    console.log('[RangeKeeper] Backend sync OK:', result);
     return result;
   } catch (err) {
-    console.error('[RangeKeeper] Backend sync error:', err);
-    // Don't throw - offline mode is okay
+    // Offline mode is fine — data persists in IndexedDB
+    console.log('[RangeKeeper] Backend unreachable (offline mode OK)');
     return null;
   }
 }
 
 // ============================================================================
-// MAIN SCRAPE LOGIC
+// MAIN SCRAPE ORCHESTRATOR
 // ============================================================================
 
 async function runScraper() {
-  console.log('[RangeKeeper] Starting scraper...');
-  
-  // Detect current page
   currentPage = detectPage();
-  console.log(`[RangeKeeper] Current page: ${currentPage}`);
-  
-  // Scrape based on page type
-  if (currentPage === 'courses-list') {
-    scrapedData.courses = scrapeCourses();
-    await saveToIndexedDB('courses', scrapedData.courses);
-  } else if (currentPage === 'activity-stream') {
-    scrapedData.assignments = scrapeAssignments();
-    await saveToIndexedDB('assignments', scrapedData.assignments);
-  } else if (currentPage === 'calendar') {
-    const events = scrapeCalendar();
-    // Store calendar events as assignments
-    scrapedData.assignments = [...scrapedData.assignments, ...events];
-    await saveToIndexedDB('assignments', scrapedData.assignments);
-  } else if (currentPage === 'grades') {
-    scrapedData.grades = scrapeGrades();
-    await saveToIndexedDB('grades', scrapedData.grades);
+  console.log(`[RangeKeeper] ▶ Scraping page: ${currentPage} (${window.location.href})`);
+
+  let newData = {};
+
+  switch (currentPage) {
+    case 'courses-list':
+      newData.courses = scrapeCourses();
+      await saveToIndexedDB('courses', newData.courses);
+      break;
+
+    case 'activity-stream':
+      // Activity stream has BOTH assignment info and grade postings
+      newData.assignments = scrapeAssignments();
+      await saveToIndexedDB('assignments', newData.assignments);
+
+      if (typeof scrapeGradesFromActivity === 'function') {
+        newData.grades = scrapeGradesFromActivity();
+        await saveToIndexedDB('grades', newData.grades);
+      }
+      break;
+
+    case 'course-grades':
+      // Individual course grade book
+      if (typeof scrapeGradesFromGradesPage === 'function') {
+        newData.grades = scrapeGradesFromGradesPage();
+        await saveToIndexedDB('grades', newData.grades);
+      }
+      break;
+
+    case 'grades-overview':
+      // Overall grades across all courses
+      if (typeof scrapeGradesFromGradesPage === 'function') {
+        newData.grades = scrapeGradesFromGradesPage();
+        await saveToIndexedDB('grades', newData.grades);
+      }
+      break;
+
+    case 'grade-detail':
+      // Detailed grade view with feedback
+      if (typeof scrapeFeedback === 'function') {
+        const feedback = scrapeFeedback();
+        if (feedback) {
+          newData.feedback = [feedback];
+          await saveToIndexedDB('feedback', [feedback]);
+          // Also update the grade record with feedback
+          if (feedback.score || feedback.instructorFeedback) {
+            await saveToIndexedDB('grades', [{
+              id: feedback.id,
+              courseId: feedback.courseId,
+              assignmentName: feedback.assignmentName,
+              score: feedback.score,
+              possible: feedback.possible,
+              letterGrade: feedback.letterGrade,
+              feedback: feedback.instructorFeedback,
+              rubricScores: feedback.rubricScores,
+              source: 'feedback-detail',
+              scrapedAt: Date.now()
+            }]);
+          }
+        }
+      }
+      break;
+
+    case 'messages-landing':
+      // Messages overview (courses with unread counts)
+      if (typeof scrapeMessages === 'function') {
+        newData.messages = scrapeMessages();
+        await saveToIndexedDB('messages', newData.messages);
+      }
+      break;
+
+    case 'course-messages':
+      // Messages within a specific course
+      if (typeof scrapeMessageThread === 'function') {
+        newData.messages = scrapeMessageThread();
+        await saveToIndexedDB('messages', newData.messages);
+      }
+      break;
+
+    case 'message-detail':
+      // Full message body
+      if (typeof scrapeMessageDetail === 'function') {
+        const detail = scrapeMessageDetail();
+        if (detail) {
+          newData.messages = [detail];
+          await saveToIndexedDB('messages', [detail]);
+        }
+      }
+      break;
+
+    case 'calendar':
+      // Calendar events as assignments
+      newData.assignments = scrapeAssignments();
+      await saveToIndexedDB('assignments', newData.assignments);
+      break;
+
+    case 'course-content':
+    case 'course-page':
+      // Try to scrape assignments from course content
+      newData.assignments = scrapeAssignments();
+      await saveToIndexedDB('assignments', newData.assignments);
+      break;
+
+    default:
+      console.log('[RangeKeeper] Unknown page type, running generic scrape...');
+      // Try everything
+      newData.assignments = scrapeAssignments();
+      if (newData.assignments.length > 0) await saveToIndexedDB('assignments', newData.assignments);
+      break;
   }
-  
-  // Update last scraped timestamp
-  scrapedData.lastScraped = Date.now();
-  
+
+  // Update timestamp
+  scrapedData = { ...scrapedData, ...newData, lastScraped: Date.now() };
+
+  // Collect all data for sync
+  const allData = {
+    courses: await getAllFromDB('courses'),
+    assignments: await getAllFromDB('assignments'),
+    grades: await getAllFromDB('grades'),
+    messages: await getAllFromDB('messages'),
+    feedback: await getAllFromDB('feedback'),
+    lastScraped: Date.now(),
+    currentPage: currentPage
+  };
+
   // Sync to backend
-  await syncToBackend(scrapedData);
-  
-  // Send to background script for notification processing
-  chrome.runtime.sendMessage({
-    type: 'DATA_UPDATE',
-    data: scrapedData
-  });
-  
-  console.log('[RangeKeeper] Scraper complete');
+  await syncToBackend(allData);
+
+  // Notify background script
+  try {
+    chrome.runtime.sendMessage({
+      type: 'DATA_UPDATE',
+      data: allData,
+      page: currentPage
+    });
+  } catch (err) {
+    // Extension context may be invalidated
+    console.log('[RangeKeeper] Could not reach background script');
+  }
+
+  // Log summary
+  const summary = [
+    newData.courses ? `${newData.courses.length} courses` : null,
+    newData.assignments ? `${newData.assignments.length} assignments` : null,
+    newData.grades ? `${newData.grades.length} grades` : null,
+    newData.messages ? `${newData.messages.length} messages` : null,
+    newData.feedback ? `${newData.feedback.length} feedback` : null,
+  ].filter(Boolean).join(', ');
+
+  console.log(`[RangeKeeper] ✅ Scrape complete: ${summary || 'no new data'}`);
 }
 
 // ============================================================================
-// INITIALIZATION
+// SPA NAVIGATION DETECTION
 // ============================================================================
 
-// Wait for page to load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-function init() {
-  console.log('[RangeKeeper] Initializing...');
-  
-  // Run scraper on page load
-  setTimeout(runScraper, 2000); // Wait 2s for dynamic content
-  
-  // Set up MutationObserver for SPA navigation
-  const observer = new MutationObserver((mutations) => {
-    // Check if URL changed (SPA navigation)
-    const newPage = detectPage();
-    if (newPage !== currentPage) {
-      console.log(`[RangeKeeper] Page changed: ${currentPage} → ${newPage}`);
-      currentPage = newPage;
-      setTimeout(runScraper, 1000);
+function watchForNavigation() {
+  // Watch for URL changes (Blackboard Ultra is a SPA)
+  const observer = new MutationObserver(() => {
+    const newUrl = window.location.href;
+    if (newUrl !== lastUrl) {
+      console.log(`[RangeKeeper] 🔄 Navigation: ${lastUrl} → ${newUrl}`);
+      lastUrl = newUrl;
+      // Wait for new content to render
+      setTimeout(runScraper, 1500);
     }
   });
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true
   });
-  
-  console.log('[RangeKeeper] Initialized and watching for changes');
+
+  // Also listen for popstate (back/forward navigation)
+  window.addEventListener('popstate', () => {
+    setTimeout(runScraper, 1500);
+  });
+
+  // And hashchange (some Blackboard views use hash routing)
+  window.addEventListener('hashchange', () => {
+    setTimeout(runScraper, 1500);
+  });
 }
 
 // ============================================================================
-// MESSAGE LISTENER
+// MESSAGE LISTENER (from popup or background)
 // ============================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'SCRAPE_NOW') {
     runScraper().then(() => {
-      sendResponse({ success: true });
+      sendResponse({ success: true, page: currentPage });
     });
-    return true; // Async response
+    return true;
+  }
+
+  if (request.type === 'GET_PAGE_INFO') {
+    sendResponse({
+      page: detectPage(),
+      url: window.location.href,
+      title: document.title
+    });
+    return false;
   }
 });
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+function init() {
+  console.log('[RangeKeeper] 🎯 Initializing on UA Blackboard Ultra...');
+
+  // Initial scrape after page loads
+  setTimeout(runScraper, 2000);
+
+  // Watch for SPA navigation
+  watchForNavigation();
+
+  // Periodic re-scrape (catch dynamically loaded content)
+  setInterval(() => {
+    const page = detectPage();
+    if (page !== 'unknown') {
+      console.log('[RangeKeeper] ⏰ Periodic re-scrape...');
+      runScraper();
+    }
+  }, 60000); // Every 60 seconds
+
+  console.log('[RangeKeeper] ✅ Initialized and watching for changes');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
