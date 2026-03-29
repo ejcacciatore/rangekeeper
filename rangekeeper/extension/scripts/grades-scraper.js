@@ -108,7 +108,15 @@ function findGradeItems() {
 
 function detectCurrentSemester() {
   const codes = [...(document.body?.textContent || '').matchAll(/(\d{6})-[A-Z]{2,5}/g)].map(m => m[1]);
-  return codes.length > 0 ? [...new Set(codes)].sort().reverse()[0] : null;
+  if (codes.length === 0) return null;
+  const unique = [...new Set(codes)];
+  // Current semester = most frequent code (not just highest)
+  // because old courses may still appear on the page
+  const freq = {};
+  codes.forEach(c => freq[c] = (freq[c] || 0) + 1);
+  // Return the most frequent code among the top 2 highest
+  const topTwo = unique.sort().reverse().slice(0, 2);
+  return topTwo.sort((a, b) => (freq[b] || 0) - (freq[a] || 0))[0];
 }
 
 function scrapeGradesFromGradesPage() {
@@ -219,8 +227,17 @@ function scrapeGradesFromGradesPage() {
   // URL example: ualearn.blackboard.com/ultra/courses/_401764_1/grades
 
   const courseIdFromUrl = url.match(/\/courses\/_(\d+)_\d+/)?.[1];
-  const courseCodeFromPage = (document.body?.textContent || '').match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
+  // Try to get course code from breadcrumb, page header, or tab title first
+  const breadcrumb = document.querySelector('[class*="breadcrumb"], [aria-label*="breadcrumb"], nav, h1, h2, [class*="course-title"]');
+  const breadcrumbText = breadcrumb?.textContent || '';
+  const courseCodeFromBreadcrumb = breadcrumbText.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
+  // Also check document title and all page text
+  const pageTitle = document.title || '';
+  const courseCodeFromTitle = pageTitle.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
+  const courseCodeFromPage = courseCodeFromBreadcrumb || courseCodeFromTitle ||
+    (document.body?.textContent || '').match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
   const courseRef = courseCodeFromPage || (courseIdFromUrl ? `_${courseIdFromUrl}_1` : 'unknown');
+  console.log(`[RangeKeeper] Course ref: ${courseRef} (from: ${courseCodeFromPage ? 'page' : 'url'}`);
 
   // Overall grade from top-right badge ("A-" in green pill)
   const overallEl = document.querySelector('[class*="current-grade"], [class*="grade-badge"], .current-grade') ||
@@ -247,24 +264,41 @@ function scrapeGradesFromGradesPage() {
     const text = (row.textContent || '').trim();
     if (text.length < 5) return;
 
-    // Assignment name — first meaningful text/link
+    // Assignment name — first meaningful non-date, non-score text line
     let assignmentName = null;
-    const nameEl = row.querySelector('a, [class*="title"], [class*="name"], h3, h4, td:first-child');
-    if (nameEl) assignmentName = nameEl.textContent.trim().split('\n')[0].trim();
-    if (!assignmentName) {
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3 && !/^\d/.test(l));
-      assignmentName = lines[0]?.substring(0, 100);
+
+    // Try link text first (most reliable)
+    const linkEl = row.querySelector('a');
+    if (linkEl) assignmentName = linkEl.textContent.trim().split('\n')[0].trim();
+
+    // Fallback: first line of text that isn't a date, score, or status word
+    if (!assignmentName || assignmentName.length < 3) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l =>
+        l.length > 3
+        && !/^\d{1,2}\/\d{1,2}\/\d{2}/.test(l)       // not a date
+        && !/^\d+\s*\/\s*\d+/.test(l)                  // not a score
+        && !/^(Graded|Late|Submitted|Total|View|Status|Due Date|Item Name)$/i.test(l)
+        && !/^First participated/.test(l)
+        && !/^No participation/.test(l)
+      );
+      assignmentName = lines[0]?.substring(0, 120);
     }
+
     if (!assignmentName || assignmentName.length < 2) return;
+    // Skip "Total" row
+    if (/^Total$/i.test(assignmentName)) return;
     if (seenItems.has(assignmentName)) return;
     seenItems.add(assignmentName);
 
     // Score pill (e.g., "45 / 50", "0 / 30", "505 / 540", "93.93%")
-    const scoreMatch = text.match(/([\d.]+)\s*\/\s*([\d,]+)/);
+    // Must NOT match date patterns like "4/10/26" (dates have 2-digit year after second slash)
+    const scoreMatch = text.match(/([\d.]+)\s*\/\s*([\d,]+)(?!\s*\/|\d{2})/);
     const pctMatch = text.match(/([\d.]+)%/);
     const score = scoreMatch ? scoreMatch[1] : null;
     const possible = scoreMatch ? scoreMatch[2].replace(/,/g,'') : null;
-    const percentage = score && possible
+    // Sanity check: possible score should be > 0 and < 10000
+    const validScore = score && possible && parseFloat(possible) > 0 && parseFloat(possible) < 10000;
+    const percentage = validScore
       ? Math.round((parseFloat(score)/parseFloat(possible))*100)
       : pctMatch ? parseFloat(pctMatch[1]) : null;
 
