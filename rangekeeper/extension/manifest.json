@@ -32,12 +32,11 @@
         "scripts/content.js"
       ],
       "run_at": "document_idle"
-    },
-
+    }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["scripts/utils.js", "scripts/devtools-bridge.js"],
+      "resources": ["scripts/utils.js"],
       "matches": [
         "https://ualearn.blackboard.com/*",
         "https://*.blackboard.com/*",
