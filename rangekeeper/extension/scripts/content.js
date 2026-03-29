@@ -45,13 +45,15 @@ function detectPage() {
     return 'activity-stream';
   }
   
-  // Course grades page (inside a specific course)
-  if (url.includes('/ultra/courses/') && (url.includes('/grades') || hash.includes('grades'))) {
+  // Course gradebook (inside a specific course)
+  // URL: ualearn.blackboard.com/ultra/courses/_401764_1/grades
+  if (url.includes('/ultra/courses/') && url.includes('/grades')) {
     return 'course-grades';
   }
-  
-  // Overall grades page (ualearn.blackboard.com/ultra/grades)
-  if ((url.includes('/ultra/grades') || url.endsWith('/ultra/grades')) && !url.includes('/courses/')) {
+
+  // Overall grades page
+  // URL: ualearn.blackboard.com/ultra/grades
+  if (/\/ultra\/grades\b/.test(url) && !url.includes('/courses/')) {
     return 'grades-overview';
   }
 

@@ -1,504 +1,379 @@
 /**
- * Grades Scraper for UA Blackboard Ultra
- * 
- * Scrapes from THREE contexts:
- * 1. Activity Stream — "Grade posted: X" items
- * 2. Course Grades page — Full grade table (course → Grades tab)
- * 3. Overall Grades page — All courses combined
- * 
- * Based on actual UA Blackboard Ultra DOM (March 2026)
+ * Grades Scraper — UA Blackboard Ultra
+ * Updated with exact DOM structure observed March 2026
+ *
+ * THREE pages scraped:
+ * 1. /ultra/grades — Overview cards (course + overall grade + recent grades)
+ * 2. /ultra/courses/_XXXX_1/grades — Individual gradebook (table rows)
+ * 3. /ultra/stream — Activity stream (assignments + "Grade posted" items in Recent)
  */
 
 // ============================================================================
 // ACTIVITY STREAM GRADES
+// URL: ualearn.blackboard.com/ultra/stream
+// DOM: Timeline with sections "Important", "Upcoming", "Today", "Recent"
+// Grade postings appear in "Recent" section with "Grade posted: X" text
 // ============================================================================
 
 function scrapeGradesFromActivity() {
   console.log('[RangeKeeper] Scraping grades from Activity stream...');
   const grades = [];
 
-  // UA Blackboard Ultra Activity Stream DOM structure (observed March 2026):
-  // Timeline items are inside a scrollable div, each item has:
-  //   - Date text (e.g., "Mar 27, 2026")
-  //   - Course code text (e.g., "202610-REL-100-919")
-  //   - "Grade posted: [assignment name]" text
-  //   - "View my grade" button
-  // The items render via UEF (Ultra Extension Framework) events
+  // Find all text nodes containing "Grade posted"
+  const found = findGradeItems();
+  console.log(`[RangeKeeper] Grade item candidates: ${found.length}`);
 
-  // Strategy 1: Look for elements containing "Grade posted" text directly
-  const allItems = findGradeItems();
-
-  // Strategy 2: Also try common Ultra stream containers
-  const containers = [
-    ...document.querySelectorAll('[class*="stream"] li'),
-    ...document.querySelectorAll('[class*="stream"] > div > div'),
-    ...document.querySelectorAll('ul[class*="list"] > li'),
-    ...document.querySelectorAll('[class*="timeline"] li'),
-    ...document.querySelectorAll('[class*="activity"] li'),
-    ...document.querySelectorAll('main li'),
-  ].filter(el => /Grade posted/i.test(el.textContent));
-
-  let items = [...new Set([...allItems, ...containers])];
-
-  items.forEach((item, idx) => {
+  found.forEach((item, idx) => {
     try {
       const text = (item.textContent || '').trim();
-      if (!text.includes('Grade posted') && !text.includes('grade posted')) return;
 
-      // Extract course code (e.g., "202610-REL-100-919")
-      const courseMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
-      const courseId = courseMatch ? courseMatch[1] : null;
+      // Course code
+      const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      const courseId = codeMatch ? codeMatch[1] : null;
 
-      // Extract assignment name after "Grade posted:"
-      const assignmentMatch = text.match(/Grade posted:\s*(.+?)(?:\s*View my grade|\s*Hide|\s*$)/i);
-      const assignmentName = assignmentMatch ? assignmentMatch[1].trim() : 'Unknown Assignment';
+      // Assignment name after "Grade posted:"
+      const assignMatch = text.match(/Grade posted:\s*(.+?)(?:\n|View my grade|Hide|$)/i);
+      const assignmentName = assignMatch ? assignMatch[1].trim() : 'Unknown Assignment';
 
-      // Extract score if visible (e.g., "50 / 50")
-      const scoreMatch = text.match(/(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)/);
+      // Score if visible (e.g., "50 / 50")
+      const scoreMatch = text.match(/([\d.]+)\s*\/\s*([\d.]+)/);
       const score = scoreMatch ? scoreMatch[1] : null;
       const possible = scoreMatch ? scoreMatch[2] : null;
 
-      // Extract date (e.g., "Mar 27, 2026")
+      // Date (e.g., "Mar 27, 2026")
       const dateMatch = text.match(/([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})/);
       const postedDate = dateMatch ? dateMatch[1] : null;
 
-      // Look for "View my grade" link
-      const gradeLink = item.querySelector('a[href*="grade"], button[class*="grade"]');
-      const gradeUrl = gradeLink ? (gradeLink.getAttribute('href') || '') : null;
-
-      const gradeId = generateGradeId(courseId, assignmentName, idx);
-
       grades.push({
-        id: gradeId,
+        id: `act_grade_${(courseId || 'unknown').replace(/[-]/g,'_')}_${idx}`,
         courseId: courseId,
-        courseName: courseId,
         assignmentName: assignmentName,
         score: score,
         possible: possible,
-        percentage: score && possible ? Math.round((parseFloat(score) / parseFloat(possible)) * 100) : null,
+        percentage: score && possible ? Math.round((parseFloat(score)/parseFloat(possible))*100) : null,
         postedDate: postedDate,
-        gradeUrl: gradeUrl,
-        feedback: null,
         source: 'activity-stream',
         scrapedAt: Date.now()
       });
 
-      console.log(`[RangeKeeper] Activity grade: ${courseId} - ${assignmentName} ${score ? score + '/' + possible : '(hidden)'}`);
-    } catch (err) {
-      console.error('[RangeKeeper] Error scraping activity grade:', err);
+      console.log(`[RangeKeeper] Activity grade: ${courseId} — ${assignmentName} ${score ? score+'/'+possible : '(score hidden)'}`);
+    } catch(e) {
+      console.error('[RangeKeeper] Error parsing activity grade:', e);
     }
   });
 
-  console.log(`[RangeKeeper] Found ${grades.length} grade postings from Activity stream`);
+  console.log(`[RangeKeeper] Activity grades found: ${grades.length}`);
   return grades;
 }
 
-/**
- * Find grade items by walking the DOM looking for "Grade posted" text
- * Works on UA Blackboard Ultra timeline/activity stream
- */
 function findGradeItems() {
-  const items = [];
+  const found = [];
   const seen = new Set();
 
-  // Walk all text nodes looking for "Grade posted"
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
-
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
   while (walker.nextNode()) {
     const node = walker.currentNode;
     if (!/Grade posted/i.test(node.textContent)) continue;
 
-    // Walk UP the DOM to find the best container element
     let el = node.parentElement;
-    let bestContainer = null;
+    let best = null;
     let depth = 0;
-
     while (el && depth < 12) {
       const tag = el.tagName?.toLowerCase();
       const rect = el.getBoundingClientRect();
-
-      // Good container: li, article, or a div that's sized like a card
-      if (tag === 'li' || tag === 'article') {
-        bestContainer = el;
-        break;
-      }
+      if (tag === 'li' || tag === 'article') { best = el; break; }
       if ((tag === 'div' || tag === 'section') && rect.height > 50 && rect.height < 500 && rect.width > 200) {
-        bestContainer = el;
-        // Keep going up to see if there's a better li/article
+        best = el;
       }
       el = el.parentElement;
       depth++;
     }
-
-    if (bestContainer && !seen.has(bestContainer)) {
-      seen.add(bestContainer);
-      items.push(bestContainer);
-    }
+    if (best && !seen.has(best)) { seen.add(best); found.push(best); }
   }
-
-  console.log(`[RangeKeeper] findGradeItems found ${items.length} candidate elements`);
-  return items;
+  return found;
 }
 
 // ============================================================================
-// COURSE GRADES PAGE (Individual course → Grades tab)
+// GRADES OVERVIEW PAGE
+// URL: ualearn.blackboard.com/ultra/grades
+// DOM: Course cards with:
+//   - "18424.202610" (internal ID)
+//   - "202610-REL-100-919" (course code)  
+//   - "A-" letter grade badge (green pill)
+//   - "Recent Grades" section with individual items
+//   - "505 / 540" total score
+//   - Individual items: "Module 6 Quiz" + "50 / 50" badge
+//   - "View all work (28)" link
 // ============================================================================
 
-// Detect current semester from course codes on page
-// e.g., "202610" = Spring 2026, "202540" = Fall 2025
 function detectCurrentSemester() {
-  const pageText = document.body?.textContent || '';
-  const allCodes = [...pageText.matchAll(/(\d{6})-[A-Z]{2,5}-\d{2,4}/g)].map(m => m[1]);
-  if (allCodes.length === 0) return null;
-  // Return the most recent (highest) semester code
-  return allCodes.sort().reverse()[0];
+  const codes = [...(document.body?.textContent || '').matchAll(/(\d{6})-[A-Z]{2,5}/g)].map(m => m[1]);
+  return codes.length > 0 ? [...new Set(codes)].sort().reverse()[0] : null;
 }
 
 function scrapeGradesFromGradesPage() {
-  console.log('[RangeKeeper] Scraping from Course Grades page...');
+  console.log('[RangeKeeper] Scraping grades page...');
   const grades = [];
-
-  // Extract course info from URL or page header
   const url = window.location.href;
-  const courseIdFromUrl = extractCourseIdFromUrl(url);
+  const currentSem = detectCurrentSemester();
+  console.log('[RangeKeeper] Semester:', currentSem, '| URL:', url);
 
-  // Detect current semester to filter out old courses
-  const currentSemester = detectCurrentSemester();
-  console.log('[RangeKeeper] Detected semester:', currentSemester);
+  // ── GRADES OVERVIEW (/ultra/grades) ──────────────────────────────────────
+  const isOverview = /\/ultra\/grades\b/.test(url) && !/\/courses\//.test(url);
 
-  // GRADES OVERVIEW PAGE (ualearn.blackboard.com/ultra/grades)
-  // Shows course cards with: course code, overall score badge (e.g., "964 / 1,120"), "View all work (21)" link
-  // We need to scrape CURRENT semester only (filter out old semester codes)
-  const isOverviewPage = url.includes('/ultra/grades') && !url.includes('/courses/');
+  if (isOverview) {
+    // Find course cards — each has internal ID + course code + grade badge
+    // Structure: div containing "XXXXX.202610\n202610-COURSE-CODE" + colored grade pill
 
-  if (isOverviewPage) {
-    // Scrape course-level grade cards
-    // Structure: div with course code text + score badge (colored pill)
-    const courseCards = [
-      ...document.querySelectorAll('[class*="course"], [class*="Course"]'),
-      ...document.querySelectorAll('main > div > div, main > ul > li'),
-    ].filter(el => {
+    const allEls = [...document.querySelectorAll('main *')];
+
+    // Find containers that have both internal ID pattern and course code pattern
+    const cards = allEls.filter(el => {
       const text = el.textContent || '';
-      return /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text) && /\d+\s*[\/,]\s*[\d,]+/.test(text);
+      const rect = el.getBoundingClientRect();
+      return /\d{4,6}\.\d{6}/.test(text)
+        && /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text)
+        && rect.height > 80
+        && rect.width > 400;
     });
 
-    const seen = new Set();
-    deduplicateElements(courseCards).forEach((card, idx) => {
+    const deduped = deduplicateElements(cards);
+    console.log(`[RangeKeeper] Found ${deduped.length} course grade cards`);
+
+    const seenCourses = new Set();
+
+    deduped.forEach((card, idx) => {
       const text = card.textContent || '';
 
       // Course code
-      const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/g);
       if (!codeMatch) return;
-      const courseCode = codeMatch[1];
 
-      // Filter: only current semester
-      const semCode = courseCode.split('-')[0];
-      if (currentSemester && semCode !== currentSemester) {
-        console.log(`[RangeKeeper] Skipping old semester course: ${courseCode}`);
-        return;
-      }
+      // Process each course code found (card may contain multiple)
+      codeMatch.forEach(courseCode => {
+        if (seenCourses.has(courseCode)) return;
 
-      if (seen.has(courseCode)) return;
-      seen.add(courseCode);
+        // Semester filter
+        const semCode = courseCode.split('-')[0];
+        if (currentSem && semCode !== currentSem) {
+          console.log(`[RangeKeeper] Skip old semester: ${courseCode}`);
+          return;
+        }
+        seenCourses.add(courseCode);
 
-      // Overall score (e.g., "964 / 1,120" or "320.5 / 500")
-      const scoreMatch = text.match(/([\d,.]+)\s*\/\s*([\d,]+)/);
-      const score = scoreMatch ? scoreMatch[1].replace(/,/g, '') : null;
-      const possible = scoreMatch ? scoreMatch[2].replace(/,/g, '') : null;
-      const pct = score && possible ? Math.round((parseFloat(score) / parseFloat(possible)) * 100) : null;
+        // Letter grade (e.g., "A-", "B+", "C")
+        const letterMatch = text.match(/\b([A-F][+-]?)\b/);
+        const letterGrade = letterMatch ? letterMatch[1] : null;
 
-      grades.push({
-        id: `overall_overview_${courseCode}`,
-        courseId: courseCode,
-        courseName: courseCode,
-        assignmentName: '__OVERALL__',
-        score: score,
-        possible: possible,
-        percentage: pct,
-        letterGrade: null,
-        status: 'overall',
-        source: 'grades-overview',
-        scrapedAt: Date.now()
+        // Total score (e.g., "505 / 540")
+        const totalMatch = text.match(/Total[^0-9]*([\d,]+\.?\d*)\s*\/\s*([\d,]+)/i)
+          || text.match(/([\d,]+\.?\d*)\s*\/\s*([\d,]+\.?\d*)\s*(?=\n|View all)/);
+        const totalScore = totalMatch ? totalMatch[1].replace(/,/g,'') : null;
+        const totalPossible = totalMatch ? totalMatch[2].replace(/,/g,'') : null;
+
+        // Individual recent grades from card
+        const itemMatches = [...text.matchAll(/([^\n]+?)\s+([\d.]+)\s*\/\s*([\d.]+)/g)];
+
+        // Push overall grade
+        grades.push({
+          id: `overview_${courseCode}`,
+          courseId: courseCode,
+          assignmentName: '__OVERALL__',
+          score: totalScore,
+          possible: totalPossible,
+          percentage: totalScore && totalPossible ? Math.round((parseFloat(totalScore)/parseFloat(totalPossible))*100) : null,
+          letterGrade: letterGrade,
+          status: 'overall',
+          source: 'grades-overview',
+          scrapedAt: Date.now()
+        });
+
+        console.log(`[RangeKeeper] ${courseCode}: ${letterGrade || '?'} (${totalScore}/${totalPossible})`);
+
+        // Push individual recent grade items
+        itemMatches.slice(0, 5).forEach((m, i) => {
+          const name = m[1].trim().replace(/^[^a-zA-Z0-9]+/, '');
+          if (name.length < 3 || /^Total$/i.test(name)) return;
+          grades.push({
+            id: `overview_item_${courseCode}_${i}`,
+            courseId: courseCode,
+            assignmentName: name,
+            score: m[2],
+            possible: m[3],
+            percentage: Math.round((parseFloat(m[2])/parseFloat(m[3]))*100),
+            letterGrade: null,
+            status: 'graded',
+            source: 'grades-overview',
+            scrapedAt: Date.now()
+          });
+        });
       });
-      console.log(`[RangeKeeper] Course grade: ${courseCode} = ${score}/${possible} (${pct}%)`);
     });
 
-    console.log(`[RangeKeeper] Found ${grades.length} course grades (current semester only)`);
+    console.log(`[RangeKeeper] Overview grades: ${grades.length} items`);
     return grades;
   }
 
-  // COURSE GRADES PAGE (individual course grade book)
-  // Look for overall course grade (e.g., "A-" shown in corner)
-  const overallGradeEl = document.querySelector(
-    '[class*="overall-grade"], [class*="courseGrade"], [class*="current-grade"]'
-  );
-  const overallGrade = overallGradeEl ? overallGradeEl.textContent.trim() : null;
+  // ── COURSE GRADEBOOK (/ultra/courses/_XXXX_1/grades) ─────────────────────
+  // Table with columns: Item Name | Due Date | Status | Grade (pill) | View button
+  // URL example: ualearn.blackboard.com/ultra/courses/_401764_1/grades
 
-  // The grades page has a table/list of items with columns:
-  // Name | Due Date | Status | Grade | Results
-  // Try multiple selector strategies for the grade rows
+  const courseIdFromUrl = url.match(/\/courses\/_(\d+)_\d+/)?.[1];
+  const courseCodeFromPage = (document.body?.textContent || '').match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
+  const courseRef = courseCodeFromPage || (courseIdFromUrl ? `_${courseIdFromUrl}_1` : 'unknown');
 
-  const rows = findGradeRows();
+  // Overall grade from top-right badge ("A-" in green pill)
+  const overallEl = document.querySelector('[class*="current-grade"], [class*="grade-badge"], .current-grade') ||
+    [...document.querySelectorAll('*')].find(el => {
+      const text = el.textContent.trim();
+      return /^[A-F][+-]?$/.test(text) && el.getBoundingClientRect().width < 80;
+    });
+  const overallGrade = overallEl ? overallEl.textContent.trim() : null;
 
-  rows.forEach((row, idx) => {
-    try {
-      const text = (row.textContent || '').trim();
-      if (!text || text.length < 5) return;
-
-      // Extract assignment name — usually the first prominent text or link
-      const nameEl = row.querySelector(
-        'a[href*="attempt"], [class*="item-title"], [class*="name"], h3, h4, [class*="cell-title"]'
-      ) || row.querySelector('a, span[class*="title"]');
-      const assignmentName = nameEl ? nameEl.textContent.trim() : extractFirstMeaningfulText(row);
-      if (!assignmentName || assignmentName.length < 2) return;
-
-      // Extract score (e.g., "45/50", "30/30", "50 / 50")
-      const scoreMatch = text.match(/(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)/);
-      const score = scoreMatch ? scoreMatch[1] : null;
-      const possible = scoreMatch ? scoreMatch[2] : null;
-
-      // Extract letter grade if present
-      const letterMatch = text.match(/\b([A-F][+-]?)\b/);
-      const letterGrade = letterMatch ? letterMatch[1] : null;
-
-      // Extract percentage
-      const pctMatch = text.match(/(\d+\.?\d*)%/);
-      const percentage = pctMatch ? parseFloat(pctMatch[1]) : (score && possible ? Math.round((parseFloat(score) / parseFloat(possible)) * 100) : null);
-
-      // Extract due date
-      const dateMatch = text.match(/([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})|(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-      const dueDate = dateMatch ? (dateMatch[1] || dateMatch[2]) : null;
-
-      // Extract status (Graded, Submitted, Not Started, etc.)
-      let status = 'unknown';
-      if (/graded/i.test(text)) status = 'graded';
-      else if (/submitted/i.test(text)) status = 'submitted';
-      else if (/not started|not submitted/i.test(text)) status = 'not_started';
-      else if (/in progress/i.test(text)) status = 'in_progress';
-      else if (/past due|overdue/i.test(text)) status = 'overdue';
-
-      // Check for "View" button (leads to feedback)
-      const viewBtn = row.querySelector('a[href*="attempt"], button[class*="view"], a[class*="view"]');
-      const viewUrl = viewBtn ? (viewBtn.getAttribute('href') || '') : null;
-
-      const gradeId = generateGradeId(courseIdFromUrl, assignmentName, idx);
-
-      grades.push({
-        id: gradeId,
-        courseId: courseIdFromUrl,
-        courseName: courseIdFromUrl,
-        assignmentName: assignmentName,
-        score: score,
-        possible: possible,
-        percentage: percentage,
-        letterGrade: letterGrade,
-        dueDate: dueDate,
-        status: status,
-        overallGrade: overallGrade,
-        feedback: null,
-        feedbackUrl: viewUrl,
-        source: 'grades-page',
-        scrapedAt: Date.now()
-      });
-
-      console.log(`[RangeKeeper] Grade: ${assignmentName} = ${score || '?'}/${possible || '?'} (${status})`);
-    } catch (err) {
-      console.error('[RangeKeeper] Error scraping grade row:', err);
-    }
+  // Find grade rows — table rows or divs with score pill pattern "NN / NN"
+  const tableRows = [...document.querySelectorAll('table tbody tr, [role="row"]')];
+  const scoreDivs = [...document.querySelectorAll('main *')].filter(el => {
+    const text = el.textContent || '';
+    const rect = el.getBoundingClientRect();
+    return /\d+\s*\/\s*\d+/.test(text) && rect.height > 20 && rect.height < 150 && rect.width > 300;
   });
 
-  // Store overall course grade
-  if (overallGrade && courseIdFromUrl) {
+  const rows = deduplicateElements([...tableRows, ...scoreDivs]);
+  console.log(`[RangeKeeper] Gradebook rows: ${rows.length}`);
+
+  const seenItems = new Set();
+
+  rows.forEach((row, idx) => {
+    const text = (row.textContent || '').trim();
+    if (text.length < 5) return;
+
+    // Assignment name — first meaningful text/link
+    let assignmentName = null;
+    const nameEl = row.querySelector('a, [class*="title"], [class*="name"], h3, h4, td:first-child');
+    if (nameEl) assignmentName = nameEl.textContent.trim().split('\n')[0].trim();
+    if (!assignmentName) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3 && !/^\d/.test(l));
+      assignmentName = lines[0]?.substring(0, 100);
+    }
+    if (!assignmentName || assignmentName.length < 2) return;
+    if (seenItems.has(assignmentName)) return;
+    seenItems.add(assignmentName);
+
+    // Score pill (e.g., "45 / 50", "0 / 30", "505 / 540", "93.93%")
+    const scoreMatch = text.match(/([\d.]+)\s*\/\s*([\d,]+)/);
+    const pctMatch = text.match(/([\d.]+)%/);
+    const score = scoreMatch ? scoreMatch[1] : null;
+    const possible = scoreMatch ? scoreMatch[2].replace(/,/g,'') : null;
+    const percentage = score && possible
+      ? Math.round((parseFloat(score)/parseFloat(possible))*100)
+      : pctMatch ? parseFloat(pctMatch[1]) : null;
+
+    // Status
+    let status = 'unknown';
+    if (/graded/i.test(text)) status = 'graded';
+    else if (/submitted/i.test(text)) status = 'submitted';
+    else if (/late/i.test(text)) status = 'late';
+    else if (/no participation/i.test(text)) status = 'missing';
+    else if (/not submitted/i.test(text)) status = 'not_submitted';
+
+    // Due date
+    const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    const dueDate = dateMatch ? dateMatch[1] : null;
+
+    // View link
+    const viewLink = row.querySelector('a[href*="attempt"], button, a');
+    const viewUrl = viewLink?.getAttribute('href') || null;
+
     grades.push({
-      id: `overall_${courseIdFromUrl}`,
-      courseId: courseIdFromUrl,
-      courseName: courseIdFromUrl,
+      id: `gradebook_${courseRef}_${assignmentName.replace(/\s+/g,'_').substring(0,40)}_${idx}`,
+      courseId: courseRef,
+      assignmentName: assignmentName,
+      score: score,
+      possible: possible,
+      percentage: percentage,
+      letterGrade: overallGrade,
+      dueDate: dueDate,
+      status: status,
+      feedbackUrl: viewUrl,
+      source: 'gradebook',
+      scrapedAt: Date.now()
+    });
+
+    console.log(`[RangeKeeper] Grade: ${assignmentName} = ${score || pctMatch?.[1]+'%' || '?'}/${possible || ''} [${status}]`);
+  });
+
+  // Push overall course grade
+  if (overallGrade && courseRef) {
+    grades.push({
+      id: `gradebook_overall_${courseRef}`,
+      courseId: courseRef,
       assignmentName: '__OVERALL__',
-      score: null,
-      possible: null,
-      percentage: null,
+      score: null, possible: null, percentage: null,
       letterGrade: overallGrade,
       status: 'overall',
-      overallGrade: overallGrade,
-      feedback: null,
-      source: 'grades-page',
+      source: 'gradebook',
       scrapedAt: Date.now()
     });
   }
 
-  console.log(`[RangeKeeper] Found ${grades.length} grades on Grades page`);
+  console.log(`[RangeKeeper] Gradebook: ${grades.length} items for ${courseRef}`);
   return grades;
 }
 
-/**
- * Find grade rows using multiple selector strategies
- */
-function findGradeRows() {
-  // Strategy 1: Table rows
-  let rows = document.querySelectorAll('table[class*="grade"] tbody tr, table[class*="Grade"] tbody tr');
-  if (rows.length > 0) return [...rows];
-
-  // Strategy 2: List items in grade view
-  rows = document.querySelectorAll('[class*="grade-item"], [class*="gradebook-row"], [class*="grade-row"]');
-  if (rows.length > 0) return [...rows];
-
-  // Strategy 3: Blackboard Ultra uses div-based layouts — look for repeated structures
-  rows = document.querySelectorAll('[class*="attempt"], [class*="gradeItem"]');
-  if (rows.length > 0) return [...rows];
-
-  // Strategy 4: Look for any list that contains score patterns
-  const allLists = document.querySelectorAll('ul > li, div[role="row"], div[role="listitem"]');
-  const gradeRows = [...allLists].filter(el => /\d+\s*\/\s*\d+/.test(el.textContent));
-  if (gradeRows.length > 0) return gradeRows;
-
-  // Strategy 5: Broadest — find divs/sections containing scores
-  const allDivs = document.querySelectorAll('main div, main section, main article');
-  const scoreDivs = [...allDivs].filter(el => {
-    const text = el.textContent || '';
-    const hasScore = /\d+\s*\/\s*\d+/.test(text);
-    const rect = el.getBoundingClientRect();
-    const isReasonableSize = rect.height > 20 && rect.height < 150;
-    return hasScore && isReasonableSize;
-  });
-
-  // Deduplicate — remove children of other matches
-  return deduplicateElements(scoreDivs);
-}
-
 // ============================================================================
-// FEEDBACK SCRAPER
+// FEEDBACK (grade detail/attempt view)
 // ============================================================================
 
-/**
- * Scrape feedback from a grade detail/attempt view
- * Called when user clicks "View" on a grade item
- */
 function scrapeFeedback() {
-  console.log('[RangeKeeper] Scraping feedback from grade detail view...');
+  console.log('[RangeKeeper] Scraping feedback...');
+  const url = window.location.href;
+  const body = document.body?.textContent || '';
 
-  const feedback = {
-    assignmentName: null,
-    courseId: extractCourseIdFromUrl(window.location.href),
-    score: null,
-    possible: null,
-    letterGrade: null,
-    instructorFeedback: null,
-    rubricScores: [],
-    submissionDate: null,
-    gradedDate: null,
+  const courseCode = body.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/)?.[1];
+  const header = document.querySelector('h1, h2, [class*="title"]');
+  const assignmentName = header?.textContent?.trim() || null;
+
+  const scoreMatch = body.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+  const score = scoreMatch?.[1] || null;
+  const possible = scoreMatch?.[2] || null;
+
+  // Instructor feedback text
+  let instructorFeedback = null;
+  for (const sel of ['[class*="feedback"]','[class*="comment"]','[class*="annotation"]','[class*="instructor"]']) {
+    const el = document.querySelector(sel);
+    if (el) { const t = el.textContent.trim(); if (t.length > 2) { instructorFeedback = t; break; } }
+  }
+
+  // Rubric
+  const rubricRows = [...document.querySelectorAll('[class*="rubric"] tr, [class*="criterion"]')];
+  const rubricScores = rubricRows.map(row => ({
+    criterion: row.querySelector('td:first-child, [class*="name"]')?.textContent?.trim(),
+    score: row.querySelector('td:last-child, [class*="score"]')?.textContent?.trim()
+  })).filter(r => r.criterion);
+
+  return {
+    id: `feedback_${(courseCode||'').replace(/[-]/g,'_')}_${Date.now()}`,
+    courseId: courseCode,
+    assignmentName: assignmentName,
+    score: score,
+    possible: possible,
+    percentage: score && possible ? Math.round((parseFloat(score)/parseFloat(possible))*100) : null,
+    instructorFeedback: instructorFeedback,
+    rubricScores: rubricScores,
     source: 'feedback-detail',
     scrapedAt: Date.now()
   };
-
-  // Try to find assignment name from page header
-  const headerEl = document.querySelector('h1, h2, [class*="title"], [class*="header"]');
-  if (headerEl) feedback.assignmentName = headerEl.textContent.trim();
-
-  // Score
-  const scoreText = document.body.textContent || '';
-  const scoreMatch = scoreText.match(/(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)/);
-  if (scoreMatch) {
-    feedback.score = scoreMatch[1];
-    feedback.possible = scoreMatch[2];
-  }
-
-  // Instructor feedback / comments
-  // Look for common feedback containers
-  const feedbackSelectors = [
-    '[class*="feedback"]',
-    '[class*="comment"]',
-    '[class*="instructor-note"]',
-    '[class*="grader-note"]',
-    '[class*="annotation"]',
-    '[data-testid*="feedback"]',
-    '[aria-label*="feedback"]',
-    '[aria-label*="comment"]',
-  ];
-
-  for (const sel of feedbackSelectors) {
-    const el = document.querySelector(sel);
-    if (el) {
-      const text = el.textContent.trim();
-      if (text.length > 2 && text.length < 5000) {
-        feedback.instructorFeedback = text;
-        break;
-      }
-    }
-  }
-
-  // Rubric scores (if rubric is shown)
-  const rubricRows = document.querySelectorAll(
-    '[class*="rubric"] tr, [class*="rubric"] [class*="row"], [class*="criterion"]'
-  );
-  rubricRows.forEach(row => {
-    const criterion = row.querySelector('[class*="title"], [class*="criterion-name"], td:first-child');
-    const score = row.querySelector('[class*="score"], [class*="points"], td:last-child');
-    if (criterion && score) {
-      feedback.rubricScores.push({
-        criterion: criterion.textContent.trim(),
-        score: score.textContent.trim()
-      });
-    }
-  });
-
-  // Dates
-  const dateMatches = scoreText.match(/(?:submitted|graded|posted)\s*:?\s*([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?)/gi);
-  if (dateMatches) {
-    dateMatches.forEach(match => {
-      if (/submitted/i.test(match)) feedback.submissionDate = match.replace(/submitted\s*:?\s*/i, '');
-      if (/graded|posted/i.test(match)) feedback.gradedDate = match.replace(/(?:graded|posted)\s*:?\s*/i, '');
-    });
-  }
-
-  feedback.id = generateGradeId(feedback.courseId, feedback.assignmentName, 'feedback');
-
-  console.log('[RangeKeeper] Feedback scraped:', feedback.assignmentName, feedback.instructorFeedback ? 'has feedback' : 'no feedback');
-  return feedback;
 }
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-function extractCourseIdFromUrl(url) {
-  // Match patterns like /ultra/courses/_12345_1/grades or courseId=_12345_1
-  const bbIdMatch = url.match(/courses?\/_(\d+)_\d/);
-  if (bbIdMatch) return `_${bbIdMatch[1]}_1`;
-
-  // Try to find course code in page content
-  const pageText = document.body ? document.body.textContent : '';
-  const codeMatch = pageText.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
-  return codeMatch ? codeMatch[1] : null;
-}
-
-function extractFirstMeaningfulText(el) {
-  // Get the first non-trivial text node
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  while (walker.nextNode()) {
-    const text = walker.currentNode.textContent.trim();
-    if (text.length > 2 && !/^\d+$/.test(text) && !/^[\/\-\|]$/.test(text)) {
-      return text.substring(0, 100);
-    }
-  }
-  return null;
-}
-
-function generateGradeId(courseId, assignmentName, suffix) {
-  const clean = (str) => (str || 'unknown').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 60);
-  return `grade_${clean(courseId)}_${clean(assignmentName)}_${suffix}`;
-}
-
 function deduplicateElements(elements) {
-  return elements.filter((el, i) => {
-    return !elements.some((other, j) => j !== i && other.contains(el));
-  });
+  return elements.filter((el, i) => !elements.some((other, j) => j !== i && other.contains(el)));
 }
 
-// Make functions available globally
+// Export
 if (typeof window !== 'undefined') {
   window.scrapeGradesFromActivity = scrapeGradesFromActivity;
   window.scrapeGradesFromGradesPage = scrapeGradesFromGradesPage;
