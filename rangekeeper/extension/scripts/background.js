@@ -297,7 +297,7 @@ function sendNotification({ id, title, message, priority = 0 }) {
   try {
     chrome.notifications.create(id, {
       type: 'basic',
-      iconUrl: 'icons/icon128.png',
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
       title,
       message,
       priority,

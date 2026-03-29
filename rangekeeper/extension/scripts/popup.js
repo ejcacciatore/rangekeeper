@@ -362,12 +362,16 @@ document.querySelectorAll('.btn-debug').forEach(btn => {
       try {
         response = await chrome.tabs.sendMessage(tab.id, { type: cmd });
       } catch(e) {
-        // Message channel may close before response — that's OK
+        // Silently ignore — content script may not be ready yet
         response = null;
       }
-      const count = Array.isArray(response?.result) ? response.result.length : '✓';
+      const result = response?.result;
+      const count = Array.isArray(result) ? result.length : '✓';
       btn.textContent = `✅ ${count}`;
-      if (response?.result) console.log(`[RangeKeeper] ${cmd}:`, response.result);
+      // Only log if we actually got data
+      if (Array.isArray(result) && result.length > 0) {
+        console.log(`[RangeKeeper] ${cmd} (${result.length} items):`, result);
+      }
 
       // Reload data to show new results
       setTimeout(loadData, 500);
