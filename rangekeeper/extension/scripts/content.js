@@ -555,8 +555,39 @@ if (document.readyState === 'loading') {
 }
 
 // ============================================================================
-// DEBUG CONSOLE OBJECT
-// Type RangeKeeperDebug.help() in Chrome DevTools console to get started
+// DEVTOOLS BRIDGE — listens for messages from devtools-bridge.js (page context)
+// ============================================================================
+
+window.addEventListener('message', async (event) => {
+  if (event.source !== window || event.data?.source !== 'rk-devtools') return;
+
+  const { action, id } = event.data;
+  let result = null;
+
+  try {
+    switch (action) {
+      case 'PAGE':    result = detectPage(); break;
+      case 'RUN':     await runScraper(); result = 'done'; break;
+      case 'GRADES':  result = typeof scrapeGradesFromGradesPage === 'function' ? scrapeGradesFromGradesPage() : 'scraper not loaded'; break;
+      case 'ACTIVITY':result = typeof scrapeGradesFromActivity === 'function' ? scrapeGradesFromActivity() : 'scraper not loaded'; break;
+      case 'MESSAGES':result = typeof scrapeMessages === 'function' ? scrapeMessages() : 'scraper not loaded'; break;
+      case 'THREAD':  result = typeof scrapeMessageThread === 'function' ? scrapeMessageThread() : 'scraper not loaded'; break;
+      case 'FEEDBACK':result = typeof scrapeFeedback === 'function' ? scrapeFeedback() : 'scraper not loaded'; break;
+      case 'SHOWDB':
+        const stores = ['courses','assignments','grades','messages','feedback'];
+        result = {};
+        for (const s of stores) result[s] = await getAllFromDB(s);
+        break;
+    }
+  } catch(e) {
+    result = { error: e.message };
+  }
+
+  window.postMessage({ source: 'rk-content', id, result }, '*');
+});
+
+// ============================================================================
+// DEBUG CONSOLE OBJECT (content script world — for internal use)
 // ============================================================================
 
 window.RangeKeeperDebug = {
