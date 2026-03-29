@@ -109,14 +109,9 @@ function findGradeItems() {
 function detectCurrentSemester() {
   const codes = [...(document.body?.textContent || '').matchAll(/(\d{6})-[A-Z]{2,5}/g)].map(m => m[1]);
   if (codes.length === 0) return null;
-  const unique = [...new Set(codes)];
-  // Current semester = most frequent code (not just highest)
-  // because old courses may still appear on the page
-  const freq = {};
-  codes.forEach(c => freq[c] = (freq[c] || 0) + 1);
-  // Return the most frequent code among the top 2 highest
-  const topTwo = unique.sort().reverse().slice(0, 2);
-  return topTwo.sort((a, b) => (freq[b] || 0) - (freq[a] || 0))[0];
+  // Always use the HIGHEST semester code — current semester > past semesters
+  // 202610 (Spring 2026) > 202540 (Fall 2025) > 202510 (Spring 2025)
+  return [...new Set(codes)].sort().reverse()[0];
 }
 
 function scrapeGradesFromGradesPage() {
@@ -336,8 +331,8 @@ function scrapeGradesFromGradesPage() {
     console.log(`[RangeKeeper] Grade: ${assignmentName} = ${score || pctMatch?.[1]+'%' || '?'}/${possible || ''} [${status}]`);
   });
 
-  // Push overall course grade
-  if (overallGrade && courseRef) {
+  // Push overall course grade — only if we have a real course code (not internal ID)
+  if (overallGrade && courseRef && !courseRef.startsWith('_')) {
     grades.push({
       id: `gradebook_overall_${courseRef}`,
       courseId: courseRef,
@@ -345,6 +340,20 @@ function scrapeGradesFromGradesPage() {
       score: null, possible: null, percentage: null,
       letterGrade: overallGrade,
       status: 'overall',
+      source: 'gradebook',
+      scrapedAt: Date.now()
+    });
+  } else if (overallGrade && courseRef?.startsWith('_')) {
+    // We have the internal ID but not the course code yet — still save but mark it
+    console.log(`[RangeKeeper] ⚠️ Course code not found for ${courseRef}, storing with internal ID`);
+    grades.push({
+      id: `gradebook_overall_${courseRef}`,
+      courseId: courseRef,
+      assignmentName: '__OVERALL__',
+      score: null, possible: null, percentage: null,
+      letterGrade: overallGrade,
+      status: 'overall',
+      needsCourseCode: true,
       source: 'gradebook',
       scrapedAt: Date.now()
     });

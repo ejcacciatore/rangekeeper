@@ -39,7 +39,14 @@ async function loadData() {
     // Update stats
     document.getElementById('courses-count').textContent = courses.length;
     document.getElementById('assignments-count').textContent = assignments.length;
-    document.getElementById('grades-count').textContent = grades.filter(g => g.assignmentName !== '__OVERALL__').length;
+    const semCodesForCount = grades.map(g => g.courseId?.match(/^(\d{6})-/)?.[1]).filter(Boolean);
+    const curSem = semCodesForCount.length > 0 ? [...new Set(semCodesForCount)].sort().reverse()[0] : null;
+    const currentSemGrades = grades.filter(g => {
+      if (!g.courseId || g.courseId.startsWith('_') || g.assignmentName === '__OVERALL__') return false;
+      const s = g.courseId.match(/^(\d{6})-/)?.[1];
+      return !curSem || !s || s === curSem;
+    });
+    document.getElementById('grades-count').textContent = currentSemGrades.length;
 
     // Message count — sum unread or count individual messages
     const totalUnread = messages.reduce((sum, m) => sum + (m.unreadCount || (m.isUnread ? 1 : 0)), 0);
@@ -103,9 +110,20 @@ function renderAssignments(assignments) {
 function renderGrades(grades, feedback) {
   const container = document.getElementById('grades-list');
 
-  // Filter out overall grades for separate display
-  const itemGrades = grades.filter(g => g.assignmentName !== '__OVERALL__');
-  const overallGrades = grades.filter(g => g.assignmentName === '__OVERALL__');
+  // Detect current semester (highest 6-digit code)
+  const semCodes = grades.map(g => g.courseId?.match(/^(\d{6})-/)?.[1]).filter(Boolean);
+  const currentSem = semCodes.length > 0 ? [...new Set(semCodes)].sort().reverse()[0] : null;
+
+  // Filter: current semester only, skip internal IDs like _401764_1
+  const filteredGrades = grades.filter(g => {
+    if (!g.courseId) return false;
+    if (g.courseId.startsWith('_')) return false;
+    const sem = g.courseId.match(/^(\d{6})-/)?.[1];
+    return !currentSem || !sem || sem === currentSem;
+  });
+
+  const itemGrades = filteredGrades.filter(g => g.assignmentName !== '__OVERALL__');
+  const overallGrades = filteredGrades.filter(g => g.assignmentName === '__OVERALL__');
 
   if (itemGrades.length === 0 && overallGrades.length === 0) {
     container.innerHTML = '<p class="empty-state">No grades found. Visit your Blackboard grades page to sync.</p>';
