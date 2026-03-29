@@ -50,9 +50,9 @@ function scrapeMessages() {
     if (!codeMatch) return;
     const courseCode = codeMatch[1];
 
-    // Semester filter
-    const semCode = courseCode.split('-')[0];
-    if (currentSem && semCode !== currentSem) {
+    // Semester filter — skip anything before 202600 (Spring 2026)
+    const semCode = parseInt(courseCode.split('-')[0]);
+    if (semCode < 202600) {
       console.log(`[RangeKeeper] Skip old semester: ${courseCode}`);
       return;
     }

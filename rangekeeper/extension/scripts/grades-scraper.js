@@ -156,9 +156,9 @@ function scrapeGradesFromGradesPage() {
       codeMatch.forEach(courseCode => {
         if (seenCourses.has(courseCode)) return;
 
-        // Semester filter
-        const semCode = courseCode.split('-')[0];
-        if (currentSem && semCode !== currentSem) {
+        // Hard cutoff: skip anything before Spring 2026 (202600)
+        const semCode = parseInt(courseCode.split('-')[0]);
+        if (semCode < 202600) {
           console.log(`[RangeKeeper] Skip old semester: ${courseCode}`);
           return;
         }

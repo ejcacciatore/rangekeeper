@@ -180,56 +180,99 @@ function scrapeCourses() {
 function scrapeAssignments() {
   console.log('[RangeKeeper] Scraping assignments...');
   const assignments = [];
+  const url = window.location.href;
+  const isCalendar = url.includes('/ultra/deadline') || url.includes('/ultra/calendar');
 
-  // Activity stream items
-  const activityItems = document.querySelectorAll(
-    'div[class*="base-navigation"], [class*="stream-item"], div[role="article"]'
-  );
+  if (isCalendar) {
+    // Calendar/Due Dates page
+    // Each card: Title + "Due date: 4/3/26, 12:59 AM (EDT)" + course link "18424.202610: 202610-REL-100-919"
+    const allEls = [...document.querySelectorAll('main *')];
+    const cards = allEls.filter(el => {
+      const text = el.textContent || '';
+      const rect = el.getBoundingClientRect();
+      return /Due date/i.test(text) && rect.height > 30 && rect.height < 300 && rect.width > 300;
+    });
 
-  activityItems.forEach((item, index) => {
+    const deduped = dedupEls(cards);
+    console.log(`[RangeKeeper] Calendar cards: ${deduped.length}`);
+
+    deduped.forEach((card, idx) => {
+      const text = (card.textContent || '').trim();
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+
+      // Title = first line that isn't a date, course, or timezone
+      const title = lines.find(l =>
+        !/^Due date/i.test(l) && !/^\d{5,}/.test(l) &&
+        !/^\d{6}-/.test(l) && !/\(EDT\)|\(CDT\)|\(CST\)|\(EST\)/.test(l)
+      ) || lines[0];
+
+      // Course code from link "18424.202610: 202610-REL-100-919"
+      const link = card.querySelector('a');
+      const linkText = link?.textContent || '';
+      const courseMatch = linkText.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/) ||
+        text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      const courseId = courseMatch?.[1] || null;
+
+      // Skip old semester (anything before 202600)
+      if (courseId && parseInt(courseId.split('-')[0]) < 202600) return;
+
+      // Due date
+      const dateMatch = text.match(/Due date\s*\d*\s*:\s*([^\n(]+(?:\([A-Z]{2,4}\))?)/i);
+      const rawDate = dateMatch?.[1]?.trim() || null;
+      const dueDate = rawDate ? (typeof parseDueDate === 'function' ? parseDueDate(rawDate) : rawDate) : null;
+
+      if (!title || title.length < 2) return;
+
+      assignments.push({
+        id: `cal_${(courseId||'?').replace(/[-]/g,'_')}_${idx}`,
+        courseId: courseId,
+        title: title.substring(0, 120),
+        dueDate: dueDate,
+        rawDueDate: rawDate,
+        status: 'pending',
+        source: 'calendar',
+        scrapedAt: Date.now()
+      });
+
+      console.log(`[RangeKeeper] 📅 "${title}" → ${rawDate} (${courseId})`);
+    });
+
+    console.log(`[RangeKeeper] Calendar: ${assignments.length} tasks`);
+    return assignments;
+  }
+
+  // Activity stream fallback
+  const items = document.querySelectorAll('div[class*="base-navigation"], [class*="stream-item"], div[role="article"]');
+  items.forEach((item, idx) => {
     try {
       const text = (item.textContent || '').trim();
-
-      // Look for assignment/due date patterns
-      if (text.toLowerCase().includes('due') ||
-          text.toLowerCase().includes('assignment') ||
-          text.toLowerCase().includes('submit') ||
-          text.toLowerCase().includes('quiz') ||
-          text.toLowerCase().includes('test')) {
-
-        const courseMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
-        const courseId = courseMatch ? courseMatch[1] : null;
-
-        // Extract due date
-        const dueDateMatch = text.match(
-          /due:?\s*([A-Z][a-z]{2}\s+\d{1,2}(?:,\s*\d{4})?\s+(?:at\s+)?\d{1,2}:\d{2}\s*(?:AM|PM)?)/i
-        ) || text.match(/due:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
-        const dueDate = dueDateMatch ? dueDateMatch[1].trim() : null;
-
-        const title = text.split('·')[0].split('\n')[0].trim().substring(0, 100);
-
-        let status = 'pending';
-        if (/past due|overdue/i.test(text)) status = 'overdue';
-        else if (/submitted/i.test(text)) status = 'submitted';
-        else if (/graded/i.test(text)) status = 'graded';
-
-        assignments.push({
-          id: `assignment_${courseId || ''}_${index}`,
-          courseId: courseId,
-          title: title,
-          dueDate: dueDate ? (typeof parseDueDate === 'function' ? parseDueDate(dueDate) : dueDate) : null,
-          status: status,
-          source: 'activity-stream',
-          scrapedAt: Date.now()
-        });
-      }
-    } catch (err) {
-      console.error('[RangeKeeper] Error scraping assignment:', err);
-    }
+      if (!/due|assignment|submit|quiz|test/i.test(text)) return;
+      const courseMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      const courseId = courseMatch?.[1] || null;
+      if (courseId && parseInt(courseId.split('-')[0]) < 202600) return;
+      const dateMatch = text.match(/due:?\s*([A-Z][a-z]{2}\s+\d{1,2}[^·\n]+)/i) ||
+        text.match(/due:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+      const dueDate = dateMatch?.[1]?.trim() || null;
+      const title = text.split('\n')[0].trim().substring(0, 100);
+      let status = 'pending';
+      if (/past due|overdue/i.test(text)) status = 'overdue';
+      else if (/submitted/i.test(text)) status = 'submitted';
+      assignments.push({
+        id: `act_${courseId||''}_${idx}`,
+        courseId, title, status,
+        dueDate: dueDate ? (typeof parseDueDate === 'function' ? parseDueDate(dueDate) : dueDate) : null,
+        source: 'activity-stream',
+        scrapedAt: Date.now()
+      });
+    } catch(e) {}
   });
 
-  console.log(`[RangeKeeper] Scraped ${assignments.length} assignments`);
+  console.log(`[RangeKeeper] Activity: ${assignments.length} tasks`);
   return assignments;
+}
+
+function dedupEls(els) {
+  return els.filter((el, i) => !els.some((other, j) => j !== i && other.contains(el)));
 }
 
 // ============================================================================
@@ -349,11 +392,8 @@ async function runScraper() {
       break;
 
     case 'grades-overview':
-      // Overall grades across all courses
-      if (typeof scrapeGradesFromGradesPage === 'function') {
-        newData.grades = scrapeGradesFromGradesPage();
-        await saveToIndexedDB('grades', newData.grades);
-      }
+      // Grades overview has a carousel — skip it, rely on individual gradebook pages
+      console.log('[RangeKeeper] Grades overview carousel — skipping, visit individual course gradebooks instead');
       break;
 
     case 'grade-detail':
