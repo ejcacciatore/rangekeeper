@@ -525,30 +525,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Debug commands — trigger from popup or background
   if (request.type === 'DEBUG_GRADES') {
     const r = typeof scrapeGradesFromGradesPage === 'function' ? scrapeGradesFromGradesPage() : [];
-    console.log('[RangeKeeper] 📊 GRADES:', JSON.stringify(r, null, 2));
+    console.log('[RangeKeeper] 📊 GRADES (' + r.length + '):', r);
     sendResponse({ result: r });
-    return false;
+    return true;
   }
 
   if (request.type === 'DEBUG_ACTIVITY') {
     const r = typeof scrapeGradesFromActivity === 'function' ? scrapeGradesFromActivity() : [];
-    console.log('[RangeKeeper] 🎯 ACTIVITY GRADES:', JSON.stringify(r, null, 2));
+    console.log('[RangeKeeper] 🎯 ACTIVITY GRADES (' + r.length + '):', r);
     sendResponse({ result: r });
-    return false;
+    return true;
   }
 
   if (request.type === 'DEBUG_MESSAGES') {
     const r = typeof scrapeMessages === 'function' ? scrapeMessages() : [];
-    console.log('[RangeKeeper] 💬 MESSAGES:', JSON.stringify(r, null, 2));
+    console.log('[RangeKeeper] 💬 MESSAGES (' + r.length + '):', r);
     sendResponse({ result: r });
-    return false;
+    return true;
   }
 
   if (request.type === 'DEBUG_THREAD') {
     const r = typeof scrapeMessageThread === 'function' ? scrapeMessageThread() : [];
-    console.log('[RangeKeeper] 📨 THREAD:', JSON.stringify(r, null, 2));
+    console.log('[RangeKeeper] 📨 THREAD (' + r.length + '):', r);
     sendResponse({ result: r });
-    return false;
+    return true;
   }
 });
 

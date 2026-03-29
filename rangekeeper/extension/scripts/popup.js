@@ -358,10 +358,16 @@ document.querySelectorAll('.btn-debug').forEach(btn => {
         return;
       }
 
-      const response = await chrome.tabs.sendMessage(tab.id, { type: cmd });
-      const count = Array.isArray(response?.result) ? response.result.length : '?';
+      let response;
+      try {
+        response = await chrome.tabs.sendMessage(tab.id, { type: cmd });
+      } catch(e) {
+        // Message channel may close before response — that's OK
+        response = null;
+      }
+      const count = Array.isArray(response?.result) ? response.result.length : '✓';
       btn.textContent = `✅ ${count}`;
-      console.log(`[RangeKeeper] ${cmd}:`, response?.result);
+      if (response?.result) console.log(`[RangeKeeper] ${cmd}:`, response.result);
 
       // Reload data to show new results
       setTimeout(loadData, 500);
