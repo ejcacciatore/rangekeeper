@@ -113,42 +113,82 @@ function scrapeMessageThread() {
     ...document.querySelectorAll('[class*="message-item"], [class*="messageRow"]'),
   ];
 
-  // Fallback: find rows with date pattern + "To:" pattern
-  const rows = candidates.length > 0 ? candidates : [...document.querySelectorAll('main tr, main li, main div')].filter(el => {
+  // UA Blackboard Ultra course message list DOM (observed March 2026):
+  // Each message card has:
+  //   - Avatar circle image
+  //   - Sender name (bold) + unread badge (purple circle ②)
+  //   - "To: All course members"
+  //   - Date: "4 hours ago, at 3:27 PM" OR "3/4/26, 8:09 AM"
+  //   - Preview text (truncated with "...")
+  //   - Trash icon (delete)
+  // The messages list is under "Course Messages" heading
+
+  // Find message cards — look for elements with "To: All course members" or "To: " pattern
+  const allEls = [...document.querySelectorAll('main *')];
+  const msgCards = allEls.filter(el => {
     const text = el.textContent || '';
     const rect = el.getBoundingClientRect();
-    return /\d{1,2}\/\d{1,2}\/\d{2}/.test(text)
-      && rect.height > 30 && rect.height < 300
+    return /To:\s*(All course members|[A-Z])/i.test(text)
+      && rect.height > 40 && rect.height < 400
       && rect.width > 200;
   });
 
-  deduplicateElements(rows).forEach((row, idx) => {
+  const rows = candidates.length > 0 ? [...candidates, ...msgCards] : msgCards;
+  const deduped = deduplicateElements(rows);
+
+  console.log(`[RangeKeeper] Found ${deduped.length} message cards`);
+
+  deduped.forEach((row, idx) => {
     const text = (row.textContent || '').trim();
     if (text.length < 10) return;
 
-    // Sender (usually first bold text or strong element)
+    // Sender — first meaningful text, or strong/bold element
     let sender = 'Unknown';
-    const boldEl = row.querySelector('strong, b, [class*="author"], [class*="sender"]');
-    if (boldEl) sender = boldEl.textContent.trim();
+    const nameEls = row.querySelectorAll('strong, b, h3, h4, [class*="name"], [class*="author"]');
+    for (const el of nameEls) {
+      const t = el.textContent.trim();
+      if (t.length > 2 && t.length < 60 && !/^To:|^Hey|^Course/.test(t)) {
+        sender = t; break;
+      }
+    }
+    // Fallback: first line of text
+    if (sender === 'Unknown') {
+      const firstLine = text.split('\n')[0].trim();
+      if (firstLine.length > 2 && firstLine.length < 60) sender = firstLine;
+    }
 
     // Recipients
     const toMatch = text.match(/To:\s*(.+?)(?:\n|$)/);
     const recipients = toMatch ? toMatch[1].trim() : null;
 
-    // Date
-    const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-    const date = dateMatch ? dateMatch[0] : null;
+    // Date — multiple formats:
+    // "4 hours ago, at 3:27 PM" | "3/4/26, 8:09 AM" | "2/26/26, 2:24 PM"
+    let date = null;
+    const relMatch = text.match(/(\d+\s+(?:hour|minute|day)s?\s+ago[^,]*(?:,\s*at\s*[\d:]+\s*[AP]M)?)/i);
+    const absMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}(?:,\s*[\d:]+\s*[AP]M)?)/);
+    date = relMatch ? relMatch[1] : (absMatch ? absMatch[1] : null);
 
-    // Unread indicators (numbered circles ①②③ or unread class)
-    const isUnread = /[①②③④⑤⑥⑦⑧⑨]/.test(text)
-      || !!row.querySelector('[class*="unread"], [class*="new"]');
+    // Unread — purple numbered circle badge (①②③) or unread class
+    const isUnread = /[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭]/.test(text)
+      || !!row.querySelector('[class*="unread"]');
 
-    // Preview text
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5 && !/^To:|^\d{1,2}\/\d/.test(l));
-    const preview = lines.slice(1).join(' ').substring(0, 150);
+    // Unread count from badge
+    const badgeMatch = text.match(/[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭]/);
+    const circleToNum = {'①':1,'②':2,'③':3,'④':4,'⑤':5,'⑥':6,'⑦':7,'⑧':8,'⑨':9,'⑩':10,'⑪':11,'⑫':12,'⑬':13,'⑭':14};
+    const unreadCount = badgeMatch ? (circleToNum[badgeMatch[0]] || 1) : 0;
+
+    // Preview — the truncated message text
+    const lines = text.split('\n').map(l => l.trim()).filter(l =>
+      l.length > 10
+      && !/^To:/i.test(l)
+      && l !== sender
+      && !/^\d{1,2}\/\d/.test(l)
+      && !/hour[s]? ago/i.test(l)
+    );
+    const preview = lines[0] ? lines[0].substring(0, 200) : '';
 
     messages.push({
-      id: `msg_thread_${courseId}_${idx}`,
+      id: `msg_thread_${courseId}_${idx}_${Date.now()}`,
       type: 'message',
       courseId: courseId,
       sender: sender,
@@ -156,9 +196,12 @@ function scrapeMessageThread() {
       preview: preview,
       date: date,
       isUnread: isUnread,
+      unreadCount: unreadCount,
       source: 'course-messages',
       scrapedAt: Date.now()
     });
+
+    console.log(`[RangeKeeper] Message: ${sender} | ${date} | unread:${isUnread} | "${preview.substring(0,50)}"`);
   });
 
   console.log(`[RangeKeeper] Found ${messages.length} messages in thread`);
