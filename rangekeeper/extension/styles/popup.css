@@ -317,6 +317,29 @@ footer {
   cursor: not-allowed;
 }
 
+.debug-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.btn-debug {
+  flex: 1;
+  padding: 6px 2px;
+  background: #0f3460;
+  color: #8888cc;
+  border: 1px solid #e94560;
+  border-radius: 5px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-debug:hover {
+  background: #e94560;
+  color: white;
+}
+
 .last-sync {
   margin-top: 6px;
   font-size: 11px;

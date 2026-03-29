@@ -342,6 +342,42 @@ document.getElementById('sync-btn').addEventListener('click', async () => {
 });
 
 // ============================================================================
+// DEBUG BUTTONS — trigger scrapers on active Blackboard tab, log to console
+// ============================================================================
+
+document.querySelectorAll('.btn-debug').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const cmd = btn.dataset.cmd;
+    btn.textContent = '⏳';
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.url?.includes('blackboard.com')) {
+        alert('Please navigate to a Blackboard page first, then click this button.');
+        btn.textContent = btn.dataset.cmd.replace('DEBUG_', '');
+        return;
+      }
+
+      const response = await chrome.tabs.sendMessage(tab.id, { type: cmd });
+      const count = Array.isArray(response?.result) ? response.result.length : '?';
+      btn.textContent = `✅ ${count}`;
+      console.log(`[RangeKeeper] ${cmd}:`, response?.result);
+
+      // Reload data to show new results
+      setTimeout(loadData, 500);
+    } catch (err) {
+      btn.textContent = '❌';
+      console.error('[RangeKeeper] Debug error:', err);
+    }
+
+    setTimeout(() => {
+      btn.textContent = btn.dataset.cmd.replace('DEBUG_', '').toLowerCase();
+      btn.style.textTransform = 'capitalize';
+    }, 3000);
+  });
+});
+
+// ============================================================================
 // INIT
 // ============================================================================
 

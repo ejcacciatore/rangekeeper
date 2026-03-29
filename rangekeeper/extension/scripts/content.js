@@ -521,6 +521,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return false;
   }
+
+  // Debug commands — trigger from popup or background
+  if (request.type === 'DEBUG_GRADES') {
+    const r = typeof scrapeGradesFromGradesPage === 'function' ? scrapeGradesFromGradesPage() : [];
+    console.log('[RangeKeeper] 📊 GRADES:', JSON.stringify(r, null, 2));
+    sendResponse({ result: r });
+    return false;
+  }
+
+  if (request.type === 'DEBUG_ACTIVITY') {
+    const r = typeof scrapeGradesFromActivity === 'function' ? scrapeGradesFromActivity() : [];
+    console.log('[RangeKeeper] 🎯 ACTIVITY GRADES:', JSON.stringify(r, null, 2));
+    sendResponse({ result: r });
+    return false;
+  }
+
+  if (request.type === 'DEBUG_MESSAGES') {
+    const r = typeof scrapeMessages === 'function' ? scrapeMessages() : [];
+    console.log('[RangeKeeper] 💬 MESSAGES:', JSON.stringify(r, null, 2));
+    sendResponse({ result: r });
+    return false;
+  }
+
+  if (request.type === 'DEBUG_THREAD') {
+    const r = typeof scrapeMessageThread === 'function' ? scrapeMessageThread() : [];
+    console.log('[RangeKeeper] 📨 THREAD:', JSON.stringify(r, null, 2));
+    sendResponse({ result: r });
+    return false;
+  }
 });
 
 // ============================================================================
@@ -555,36 +584,9 @@ if (document.readyState === 'loading') {
 }
 
 // ============================================================================
-// DEVTOOLS BRIDGE — listens for messages from devtools-bridge.js (page context)
+// DEVTOOLS BRIDGE — triggered via chrome.runtime messages from popup/background
+// Also auto-logs on scrape so you can see results in DevTools console
 // ============================================================================
-
-window.addEventListener('message', async (event) => {
-  if (event.source !== window || event.data?.source !== 'rk-devtools') return;
-
-  const { action, id } = event.data;
-  let result = null;
-
-  try {
-    switch (action) {
-      case 'PAGE':    result = detectPage(); break;
-      case 'RUN':     await runScraper(); result = 'done'; break;
-      case 'GRADES':  result = typeof scrapeGradesFromGradesPage === 'function' ? scrapeGradesFromGradesPage() : 'scraper not loaded'; break;
-      case 'ACTIVITY':result = typeof scrapeGradesFromActivity === 'function' ? scrapeGradesFromActivity() : 'scraper not loaded'; break;
-      case 'MESSAGES':result = typeof scrapeMessages === 'function' ? scrapeMessages() : 'scraper not loaded'; break;
-      case 'THREAD':  result = typeof scrapeMessageThread === 'function' ? scrapeMessageThread() : 'scraper not loaded'; break;
-      case 'FEEDBACK':result = typeof scrapeFeedback === 'function' ? scrapeFeedback() : 'scraper not loaded'; break;
-      case 'SHOWDB':
-        const stores = ['courses','assignments','grades','messages','feedback'];
-        result = {};
-        for (const s of stores) result[s] = await getAllFromDB(s);
-        break;
-    }
-  } catch(e) {
-    result = { error: e.message };
-  }
-
-  window.postMessage({ source: 'rk-content', id, result }, '*');
-});
 
 // ============================================================================
 // DEBUG CONSOLE OBJECT (content script world — for internal use)

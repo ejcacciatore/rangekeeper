@@ -33,16 +33,7 @@
       ],
       "run_at": "document_idle"
     },
-    {
-      "matches": [
-        "https://ualearn.blackboard.com/*",
-        "https://*.blackboard.com/*",
-        "https://*.cstp.blackboard.com/*"
-      ],
-      "js": ["scripts/devtools-bridge.js"],
-      "run_at": "document_idle",
-      "world": "MAIN"
-    }
+
   ],
   "web_accessible_resources": [
     {
