@@ -553,3 +553,110 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+// ============================================================================
+// DEBUG CONSOLE OBJECT
+// Type RangeKeeperDebug.help() in Chrome DevTools console to get started
+// ============================================================================
+
+window.RangeKeeperDebug = {
+  help: () => {
+    console.log(`
+🎯 RangeKeeper Debug Console
+─────────────────────────────────────────
+RangeKeeperDebug.page()           → What page am I on?
+RangeKeeperDebug.run()            → Run the scraper for this page
+RangeKeeperDebug.grades()         → Scrape grades (grades page)
+RangeKeeperDebug.activity()       → Scrape grade postings (activity stream)
+RangeKeeperDebug.messages()       → Scrape message threads (messages landing)
+RangeKeeperDebug.thread()         → Scrape messages in current course
+RangeKeeperDebug.feedback()       → Scrape feedback (grade detail page)
+RangeKeeperDebug.showDB()         → Show all data in IndexedDB
+RangeKeeperDebug.clearDB()        → Clear all local data
+RangeKeeperDebug.testBackend()    → Test backend connection
+─────────────────────────────────────────`);
+  },
+
+  page: () => {
+    const p = detectPage();
+    console.log(`[RangeKeeper] Current page: ${p} | URL: ${window.location.href}`);
+    return p;
+  },
+
+  run: async () => {
+    console.log('[RangeKeeper] Manual scrape triggered...');
+    await runScraper();
+    console.log('[RangeKeeper] Done. Run RangeKeeperDebug.showDB() to see results.');
+  },
+
+  grades: () => {
+    if (typeof scrapeGradesFromGradesPage !== 'function') return console.error('scrapeGradesFromGradesPage not loaded');
+    const r = scrapeGradesFromGradesPage();
+    console.log('[RangeKeeper] Grades found:', r.length, r);
+    return r;
+  },
+
+  activity: () => {
+    if (typeof scrapeGradesFromActivity !== 'function') return console.error('scrapeGradesFromActivity not loaded');
+    const r = scrapeGradesFromActivity();
+    console.log('[RangeKeeper] Activity grades found:', r.length, r);
+    return r;
+  },
+
+  messages: () => {
+    if (typeof scrapeMessages !== 'function') return console.error('scrapeMessages not loaded');
+    const r = scrapeMessages();
+    console.log('[RangeKeeper] Message threads found:', r.length, r);
+    return r;
+  },
+
+  thread: () => {
+    if (typeof scrapeMessageThread !== 'function') return console.error('scrapeMessageThread not loaded');
+    const r = scrapeMessageThread();
+    console.log('[RangeKeeper] Messages in thread:', r.length, r);
+    return r;
+  },
+
+  feedback: () => {
+    if (typeof scrapeFeedback !== 'function') return console.error('scrapeFeedback not loaded');
+    const r = scrapeFeedback();
+    console.log('[RangeKeeper] Feedback:', r);
+    return r;
+  },
+
+  showDB: async () => {
+    const stores = ['courses', 'assignments', 'grades', 'messages', 'feedback'];
+    const result = {};
+    for (const store of stores) {
+      result[store] = await getAllFromDB(store);
+    }
+    console.table(result.courses.map(c => ({ id: c.id, name: c.name })));
+    console.log('[courses]', result.courses);
+    console.log('[assignments]', result.assignments);
+    console.log('[grades]', result.grades);
+    console.log('[messages]', result.messages);
+    console.log('[feedback]', result.feedback);
+    return result;
+  },
+
+  clearDB: async () => {
+    const db = await openDB();
+    const stores = ['courses', 'assignments', 'grades', 'messages', 'feedback'];
+    for (const store of stores) {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).clear();
+    }
+    console.log('[RangeKeeper] IndexedDB cleared.');
+  },
+
+  testBackend: async () => {
+    try {
+      const r = await fetch('http://localhost:3000/health');
+      const data = await r.json();
+      console.log('[RangeKeeper] ✅ Backend healthy:', data);
+      return data;
+    } catch (e) {
+      console.error('[RangeKeeper] ❌ Backend unreachable. Is it running on localhost:3000?', e.message);
+    }
+  }
+};

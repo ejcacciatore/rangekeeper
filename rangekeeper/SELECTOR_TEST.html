@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RangeKeeper Selector Test</title>
+<style>
+  body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+  h1 { color: #e94560; }
+  h2 { color: #667eea; margin-top: 30px; }
+  .section { background: #16213e; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  button { background: #e94560; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin: 5px; font-size: 14px; }
+  button:hover { background: #c73350; }
+  #output { background: #0f0f23; padding: 16px; border-radius: 8px; white-space: pre-wrap; font-size: 12px; max-height: 400px; overflow-y: auto; margin-top: 20px; color: #00ff88; }
+  .mock-grade-row { background: #0f3460; border-radius: 4px; padding: 10px; margin: 5px 0; display: flex; justify-content: space-between; }
+  .mock-message { background: #0f3460; border-radius: 4px; padding: 10px; margin: 5px 0; }
+  .mock-badge { background: #e94560; color: white; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>🎯 RangeKeeper Selector Test</h1>
+<p>Tests scrapers against mock Blackboard DOM structure. Open DevTools console for full output.</p>
+
+<!-- ========== MOCK: ACTIVITY STREAM ========== -->
+<h2>Activity Stream (Grade Postings)</h2>
+<div class="section" id="mock-activity">
+  <div role="article" data-testid="stream-item">
+    <span>Mar 27, 2026</span>
+    <span>202610-REL-100-919</span>
+    Grade posted: Module 6 Quiz
+    <button>View my grade</button>
+    <button>Hide</button>
+    <span>50 / 50</span>
+  </div>
+  <div role="article" data-testid="stream-item">
+    <span>Mar 23, 2026</span>
+    <span>202610-UA-101-030</span>
+    Grade posted: Attendance Week 9
+    <button>View my grade</button>
+    <button>Hide</button>
+  </div>
+  <div role="article" data-testid="stream-item">
+    <span>Mar 20, 2026</span>
+    <span>202610-EN-103-025</span>
+    Grade posted: Essay Draft 2
+    <button>View my grade</button>
+    <button>Hide</button>
+    <span>45 / 50</span>
+  </div>
+</div>
+
+<!-- ========== MOCK: GRADES PAGE ========== -->
+<h2>Course Grades Page</h2>
+<div class="section" id="mock-grades-page">
+  <div style="text-align:right; color:#4caf50; font-size:18px; font-weight:bold;">Current Grade: A-</div>
+  <div role="row" class="gradebook-row" style="display:flex; padding:8px; border-bottom:1px solid #333;">
+    <div style="flex:1">Module 1 Quiz</div>
+    <div style="width:120px">Jan 15, 2026</div>
+    <div style="width:80px">Graded</div>
+    <div style="width:80px">30/30</div>
+    <a href="/ultra/courses/_12345_1/grades/columns/_111_1/attempts/_999_1">View</a>
+  </div>
+  <div role="row" class="gradebook-row" style="display:flex; padding:8px; border-bottom:1px solid #333;">
+    <div style="flex:1">Module 5 Quiz</div>
+    <div style="width:120px">Feb 20, 2026</div>
+    <div style="width:80px">Graded</div>
+    <div style="width:80px">45/50</div>
+    <a href="/ultra/courses/_12345_1/grades/columns/_222_1/attempts/_888_1">View</a>
+  </div>
+  <div role="row" class="gradebook-row" style="display:flex; padding:8px; border-bottom:1px solid #333;">
+    <div style="flex:1">Module 6 Quiz</div>
+    <div style="width:120px">Mar 27, 2026</div>
+    <div style="width:80px">Graded</div>
+    <div style="width:80px">50/50</div>
+    <a href="/ultra/courses/_12345_1/grades/columns/_333_1/attempts/_777_1">View</a>
+  </div>
+  <div role="row" class="gradebook-row" style="display:flex; padding:8px;">
+    <div style="flex:1">Essay Draft 2</div>
+    <div style="width:120px">Mar 15, 2026</div>
+    <div style="width:80px">Graded</div>
+    <div style="width:80px">45/50</div>
+    <a href="/ultra/courses/_12345_1/grades/columns/_444_1/attempts/_666_1">View</a>
+  </div>
+</div>
+
+<!-- ========== MOCK: MESSAGES LANDING ========== -->
+<h2>Messages Landing Page (Course List)</h2>
+<div class="section" id="mock-messages-landing">
+  <ul>
+    <li style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div>16102.202610</div>
+        <div>202610-EN-103-025 — College Writing</div>
+      </div>
+      <span class="mock-badge">13</span>
+    </li>
+    <li style="padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div>19249.202610</div>
+        <div>202610-ENGR-101-006 — Engineering Fundamentals</div>
+      </div>
+      <span class="mock-badge">3</span>
+    </li>
+    <li style="padding:10px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div>20100.202610</div>
+        <div>202610-REL-100-919 — Introduction to Religion</div>
+      </div>
+      <span class="mock-badge">4</span>
+    </li>
+  </ul>
+</div>
+
+<!-- ========== MOCK: COURSE MESSAGES ========== -->
+<h2>Course Messages (EN-103)</h2>
+<div class="section" id="mock-course-messages">
+  <table style="width:100%">
+    <tbody>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:10px;">
+          <div><strong>Thom O'Rourke</strong></div>
+          <div>To: All course members</div>
+          <div style="color:#888">SPECIAL DOUBLE SHAME GROUP — Read this before Thursday...</div>
+        </td>
+        <td style="width:80px; text-align:right">①</td>
+        <td style="width:80px; text-align:right">3/27/26</td>
+      </tr>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:10px;">
+          <div><strong>Thom O'Rourke</strong></div>
+          <div>To: All course members</div>
+          <div style="color:#888">Essay 2 feedback is posted. Please review comments...</div>
+        </td>
+        <td style="width:80px; text-align:right">②</td>
+        <td style="width:80px; text-align:right">3/4/26</td>
+      </tr>
+      <tr>
+        <td style="padding:10px;">
+          <div>Thom O'Rourke</div>
+          <div>To: All course members</div>
+          <div style="color:#888">Office hours reminder for next week...</div>
+        </td>
+        <td style="width:80px; text-align:right">✓</td>
+        <td style="width:80px; text-align:right">2/26/26</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ========== CONTROLS ========== -->
+<h2>Run Tests</h2>
+<div class="section">
+  <button onclick="testActivity()">🎯 Test Activity Grades</button>
+  <button onclick="testGradesPage()">📊 Test Grades Page</button>
+  <button onclick="testMessagesLanding()">💬 Test Messages Landing</button>
+  <button onclick="testCourseMessages()">📨 Test Course Messages</button>
+  <button onclick="runAllTests()">🚀 Run All Tests</button>
+  <button onclick="clearOutput()">🗑️ Clear</button>
+</div>
+
+<div id="output">Click a test button above to see results...</div>
+
+<script src="extension/scripts/utils.js"></script>
+<script src="extension/scripts/grades-scraper.js"></script>
+<script src="extension/scripts/messages-scraper.js"></script>
+<script>
+function log(msg, data) {
+  const out = document.getElementById('output');
+  const text = typeof data !== 'undefined' 
+    ? `${msg}\n${JSON.stringify(data, null, 2)}\n\n`
+    : `${msg}\n\n`;
+  out.textContent += text;
+  out.scrollTop = out.scrollHeight;
+}
+
+function clearOutput() {
+  document.getElementById('output').textContent = '';
+}
+
+function testActivity() {
+  log('=== ACTIVITY STREAM GRADES ===');
+  // Temporarily set URL context
+  const grades = scrapeGradesFromActivity();
+  log(`Found ${grades.length} grade(s):`, grades);
+}
+
+function testGradesPage() {
+  log('=== GRADES PAGE ===');
+  const grades = scrapeGradesFromGradesPage();
+  log(`Found ${grades.length} grade(s):`, grades);
+}
+
+function testMessagesLanding() {
+  log('=== MESSAGES LANDING ===');
+  const messages = scrapeMessages();
+  log(`Found ${messages.length} thread(s):`, messages);
+}
+
+function testCourseMessages() {
+  log('=== COURSE MESSAGES ===');
+  const messages = scrapeMessageThread();
+  log(`Found ${messages.length} message(s):`, messages);
+}
+
+function runAllTests() {
+  clearOutput();
+  log('🎯 Running all selector tests...\n');
+  testActivity();
+  testGradesPage();
+  testMessagesLanding();
+  testCourseMessages();
+  log('✅ All tests complete. Check results above.');
+}
+
+// Auto-run on load
+window.onload = () => {
+  log('RangeKeeper Selector Test Page loaded.');
+  log('Scripts loaded: grades-scraper=' + (typeof scrapeGradesFromGradesPage !== "undefined" ? "✅" : "❌") + 
+      ' messages-scraper=' + (typeof scrapeMessages !== "undefined" ? "✅" : "❌"));
+};
+</script>
+</body>
+</html>
