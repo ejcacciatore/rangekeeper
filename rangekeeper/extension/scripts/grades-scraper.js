@@ -17,18 +17,28 @@ function scrapeGradesFromActivity() {
   console.log('[RangeKeeper] Scraping grades from Activity stream...');
   const grades = [];
 
-  // Activity stream items — Blackboard Ultra uses various containers
-  // Try multiple selector strategies
-  const containers = [
-    ...document.querySelectorAll('[class*="activity-stream"] [class*="stream-item"]'),
-    ...document.querySelectorAll('[class*="js-stream-item"]'),
-    ...document.querySelectorAll('div[role="article"]'),
-    ...document.querySelectorAll('[data-testid*="stream"]'),
-    // Fallback: walk all elements looking for grade text
-  ];
+  // UA Blackboard Ultra Activity Stream DOM structure (observed March 2026):
+  // Timeline items are inside a scrollable div, each item has:
+  //   - Date text (e.g., "Mar 27, 2026")
+  //   - Course code text (e.g., "202610-REL-100-919")
+  //   - "Grade posted: [assignment name]" text
+  //   - "View my grade" button
+  // The items render via UEF (Ultra Extension Framework) events
 
-  // If specific selectors fail, try a broader approach
-  let items = containers.length > 0 ? containers : findGradeItems();
+  // Strategy 1: Look for elements containing "Grade posted" text directly
+  const allItems = findGradeItems();
+
+  // Strategy 2: Also try common Ultra stream containers
+  const containers = [
+    ...document.querySelectorAll('[class*="stream"] li'),
+    ...document.querySelectorAll('[class*="stream"] > div > div'),
+    ...document.querySelectorAll('ul[class*="list"] > li'),
+    ...document.querySelectorAll('[class*="timeline"] li'),
+    ...document.querySelectorAll('[class*="activity"] li'),
+    ...document.querySelectorAll('main li'),
+  ].filter(el => /Grade posted/i.test(el.textContent));
+
+  let items = [...new Set([...allItems, ...containers])];
 
   items.forEach((item, idx) => {
     try {
@@ -84,37 +94,69 @@ function scrapeGradesFromActivity() {
 }
 
 /**
- * Fallback: find grade items by walking the DOM looking for "Grade posted" text
+ * Find grade items by walking the DOM looking for "Grade posted" text
+ * Works on UA Blackboard Ultra timeline/activity stream
  */
 function findGradeItems() {
   const items = [];
+  const seen = new Set();
+
+  // Walk all text nodes looking for "Grade posted"
   const walker = document.createTreeWalker(
     document.body,
     NodeFilter.SHOW_TEXT,
-    { acceptNode: (node) => node.textContent.includes('Grade posted') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
+    null
   );
 
   while (walker.nextNode()) {
-    // Walk up to find a reasonable container element
-    let el = walker.currentNode.parentElement;
+    const node = walker.currentNode;
+    if (!/Grade posted/i.test(node.textContent)) continue;
+
+    // Walk UP the DOM to find the best container element
+    let el = node.parentElement;
+    let bestContainer = null;
     let depth = 0;
-    while (el && depth < 8) {
-      // Look for a container that's roughly one "card" / "item"
+
+    while (el && depth < 12) {
+      const tag = el.tagName?.toLowerCase();
       const rect = el.getBoundingClientRect();
-      if (rect.height > 40 && rect.height < 400) {
-        if (!items.includes(el)) items.push(el);
+
+      // Good container: li, article, or a div that's sized like a card
+      if (tag === 'li' || tag === 'article') {
+        bestContainer = el;
         break;
+      }
+      if ((tag === 'div' || tag === 'section') && rect.height > 50 && rect.height < 500 && rect.width > 200) {
+        bestContainer = el;
+        // Keep going up to see if there's a better li/article
       }
       el = el.parentElement;
       depth++;
     }
+
+    if (bestContainer && !seen.has(bestContainer)) {
+      seen.add(bestContainer);
+      items.push(bestContainer);
+    }
   }
+
+  console.log(`[RangeKeeper] findGradeItems found ${items.length} candidate elements`);
   return items;
 }
 
 // ============================================================================
 // COURSE GRADES PAGE (Individual course → Grades tab)
 // ============================================================================
+
+// Detect current semester from course codes on page
+// e.g., "202610" = Spring 2026, "202540" = Fall 2025
+function detectCurrentSemester() {
+  const pageText = document.body?.textContent || '';
+  const allCodes = [...pageText.matchAll(/(\d{6})-[A-Z]{2,5}-\d{2,4}/g)].map(m => m[1]);
+  if (allCodes.length === 0) return null;
+  // Return the most recent (highest) semester code
+  return allCodes.sort().reverse()[0];
+}
 
 function scrapeGradesFromGradesPage() {
   console.log('[RangeKeeper] Scraping from Course Grades page...');
@@ -124,6 +166,72 @@ function scrapeGradesFromGradesPage() {
   const url = window.location.href;
   const courseIdFromUrl = extractCourseIdFromUrl(url);
 
+  // Detect current semester to filter out old courses
+  const currentSemester = detectCurrentSemester();
+  console.log('[RangeKeeper] Detected semester:', currentSemester);
+
+  // GRADES OVERVIEW PAGE (ualearn.blackboard.com/ultra/grades)
+  // Shows course cards with: course code, overall score badge (e.g., "964 / 1,120"), "View all work (21)" link
+  // We need to scrape CURRENT semester only (filter out old semester codes)
+  const isOverviewPage = url.includes('/ultra/grades') && !url.includes('/courses/');
+
+  if (isOverviewPage) {
+    // Scrape course-level grade cards
+    // Structure: div with course code text + score badge (colored pill)
+    const courseCards = [
+      ...document.querySelectorAll('[class*="course"], [class*="Course"]'),
+      ...document.querySelectorAll('main > div > div, main > ul > li'),
+    ].filter(el => {
+      const text = el.textContent || '';
+      return /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text) && /\d+\s*[\/,]\s*[\d,]+/.test(text);
+    });
+
+    const seen = new Set();
+    deduplicateElements(courseCards).forEach((card, idx) => {
+      const text = card.textContent || '';
+
+      // Course code
+      const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      if (!codeMatch) return;
+      const courseCode = codeMatch[1];
+
+      // Filter: only current semester
+      const semCode = courseCode.split('-')[0];
+      if (currentSemester && semCode !== currentSemester) {
+        console.log(`[RangeKeeper] Skipping old semester course: ${courseCode}`);
+        return;
+      }
+
+      if (seen.has(courseCode)) return;
+      seen.add(courseCode);
+
+      // Overall score (e.g., "964 / 1,120" or "320.5 / 500")
+      const scoreMatch = text.match(/([\d,.]+)\s*\/\s*([\d,]+)/);
+      const score = scoreMatch ? scoreMatch[1].replace(/,/g, '') : null;
+      const possible = scoreMatch ? scoreMatch[2].replace(/,/g, '') : null;
+      const pct = score && possible ? Math.round((parseFloat(score) / parseFloat(possible)) * 100) : null;
+
+      grades.push({
+        id: `overall_overview_${courseCode}`,
+        courseId: courseCode,
+        courseName: courseCode,
+        assignmentName: '__OVERALL__',
+        score: score,
+        possible: possible,
+        percentage: pct,
+        letterGrade: null,
+        status: 'overall',
+        source: 'grades-overview',
+        scrapedAt: Date.now()
+      });
+      console.log(`[RangeKeeper] Course grade: ${courseCode} = ${score}/${possible} (${pct}%)`);
+    });
+
+    console.log(`[RangeKeeper] Found ${grades.length} course grades (current semester only)`);
+    return grades;
+  }
+
+  // COURSE GRADES PAGE (individual course grade book)
   // Look for overall course grade (e.g., "A-" shown in corner)
   const overallGradeEl = document.querySelector(
     '[class*="overall-grade"], [class*="courseGrade"], [class*="current-grade"]'

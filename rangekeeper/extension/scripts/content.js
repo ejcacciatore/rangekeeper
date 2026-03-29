@@ -50,8 +50,8 @@ function detectPage() {
     return 'course-grades';
   }
   
-  // Overall grades page
-  if (url.includes('/ultra/grades') && !url.includes('/courses/')) {
+  // Overall grades page (ualearn.blackboard.com/ultra/grades)
+  if ((url.includes('/ultra/grades') || url.endsWith('/ultra/grades')) && !url.includes('/courses/')) {
     return 'grades-overview';
   }
 
