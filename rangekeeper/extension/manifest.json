@@ -29,6 +29,7 @@
         "scripts/utils.js",
         "scripts/grades-scraper.js",
         "scripts/messages-scraper.js",
+        "scripts/enhanced-scraper.js",
         "scripts/content.js"
       ],
       "run_at": "document_idle"
