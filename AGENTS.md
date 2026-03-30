@@ -45,6 +45,13 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - When you make a mistake → document it so future-you doesn't repeat it
 - **Text > Brain** 📝
 
+## Project-Specific Sessions
+
+For dedicated project work (like Rangekeeper), create a project context file:
+- `rangekeeper/RANGEKEEPER_SESSION.md` — Master context document
+- Reference it by saying: "Rangekeeper session" or "Load Rangekeeper context"
+- I'll read the file and maintain full continuity
+
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.
@@ -175,7 +182,7 @@ You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it
 **When to reach out:**
 
 - Important email arrived
-- Calendar event coming up (&lt;2h)
+- Calendar event coming up (<2h)
 - Something interesting you found
 - It's been >8h since you said anything
 
@@ -184,7 +191,7 @@ You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it
 - Late night (23:00-08:00) unless urgent
 - Human is clearly busy
 - Nothing new since last check
-- You just checked &lt;30 minutes ago
+- You just checked <30 minutes ago
 
 **Proactive work you can do without asking:**
 

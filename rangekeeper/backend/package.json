@@ -8,21 +8,28 @@
     "dev": "nodemon src/index.js",
     "test": "node src/test-data.js"
   },
-  "keywords": ["edtech", "accessibility", "asd", "blackboard", "lms"],
+  "keywords": [
+    "edtech",
+    "accessibility",
+    "asd",
+    "blackboard",
+    "lms"
+  ],
   "author": "Rico Cacciatore",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "better-sqlite3": "^12.8.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "sqlite3": "^5.1.6",
-    "node-cron": "^3.0.2",
-    "ical.js": "^1.5.0",
-    "node-fetch": "^2.7.0",
     "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ical.js": "^1.5.0",
+    "node-cron": "^3.0.2",
+    "node-fetch": "^2.7.0",
+    "sqlite3": "^5.1.6",
     "web-push": "^3.6.6"
   },
   "devDependencies": {
