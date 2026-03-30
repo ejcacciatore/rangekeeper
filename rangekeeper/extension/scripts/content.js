@@ -645,9 +645,10 @@ if (document.readyState === 'loading') {
 
 // ============================================================================
 // DEBUG CONSOLE OBJECT (content script world — for internal use)
+// Works around Blackboard's SES sandbox by injecting into page world
 // ============================================================================
 
-window.RangeKeeperDebug = {
+const DebugObject = {
   help: () => {
     console.log(`
 🎯 RangeKeeper Debug Console
@@ -748,3 +749,58 @@ RangeKeeperDebug.testBackend()    → Test backend connection
     }
   }
 };
+
+// Expose to window for console access
+window.RangeKeeperDebug = DebugObject;
+
+// Also try to inject into page world to bypass SES sandbox
+try {
+  const script = document.createElement('script');
+  script.textContent = `
+    window.RangeKeeperDebug = ${JSON.stringify({
+      help: 'Use the debug console for RangeKeeper commands',
+      page: 'RangeKeeperDebug.page()',
+      run: 'RangeKeeperDebug.run()',
+      grades: 'RangeKeeperDebug.grades()',
+      activity: 'RangeKeeperDebug.activity()',
+      messages: 'RangeKeeperDebug.messages()',
+      thread: 'RangeKeeperDebug.thread()',
+      feedback: 'RangeKeeperDebug.feedback()',
+      showDB: 'RangeKeeperDebug.showDB()',
+      clearDB: 'RangeKeeperDebug.clearDB()',
+      testBackend: 'RangeKeeperDebug.testBackend()'
+    })};
+    window.RangeKeeperDebug._version = '0.2.1';
+    console.log('[RangeKeeper] 🎯 Debug console ready! Type: RangeKeeperDebug.help()');
+    
+    // Proxy calls back to extension via window event
+    const handler = {
+      get(target, prop) {
+        if (typeof target[prop] !== 'object') return target[prop];
+        return (...args) => {
+          window.dispatchEvent(new CustomEvent('RangeKeeperDebugCall', {
+            detail: { method: prop, args: args }
+          }));
+        };
+      }
+    };
+  `;
+  document.documentElement.appendChild(script);
+  script.remove();
+  console.log('[RangeKeeper] 📡 Injected page-world debug interface');
+} catch (err) {
+  console.log('[RangeKeeper] Could not inject page-world debug (may be blocked by CSP)');
+}
+
+// Listen for debug calls from page world and execute them
+window.addEventListener('RangeKeeperDebugCall', async (event) => {
+  const { method, args } = event.detail;
+  if (typeof DebugObject[method] === 'function') {
+    try {
+      const result = await DebugObject[method](...args);
+      console.log(`[RangeKeeper] ${method}() result:`, result);
+    } catch (err) {
+      console.error(`[RangeKeeper] ${method}() error:`, err);
+    }
+  }
+});
