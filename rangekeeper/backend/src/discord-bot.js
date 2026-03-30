@@ -289,11 +289,25 @@ function formatRelativeTime(hours, past = false) {
 // EXPORT
 // ============================================================================
 
+// Generic message sender for event notifications
+async function sendDiscordMessage(text) {
+  try {
+    if (!isReady) {
+      console.log('[Discord] Bot not ready, skipping message:', text);
+      return;
+    }
+    await sendDM(text);
+  } catch (err) {
+    console.error('[Discord] Error sending message:', err.message);
+  }
+}
+
 module.exports = {
   initDiscordBot,
   sendDailySummary,
   sendReminder,
   sendUrgentAlert,
   sendOverdueAlert,
+  sendDiscordMessage,
   isReady: () => isReady,
 };
