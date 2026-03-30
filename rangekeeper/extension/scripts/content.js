@@ -747,6 +747,28 @@ RangeKeeperDebug.testBackend()    → Test backend connection
     } catch (e) {
       console.error('[RangeKeeper] ❌ Backend unreachable. Is it running on localhost:3000?', e.message);
     }
+  },
+
+  // Enhanced scrapers (Phase 2)
+  gradesOverviewEnhanced: () => {
+    if (typeof scrapeGradesOverviewEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeGradesOverviewEnhanced();
+    console.log('[RangeKeeper] Enhanced grades overview:', r);
+    return r;
+  },
+
+  gradebookEnhanced: () => {
+    if (typeof scrapeGradebookEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeGradebookEnhanced();
+    console.log('[RangeKeeper] Enhanced gradebook:', r);
+    return r;
+  },
+
+  messagesEnhanced: () => {
+    if (typeof scrapeMessagesEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeMessagesEnhanced();
+    console.log('[RangeKeeper] Enhanced messages:', r);
+    return r;
   }
 };
 

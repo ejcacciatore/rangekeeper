@@ -390,4 +390,5 @@ if (typeof window !== 'undefined') {
     scrapeGradebook: scrapeGradebookEnhanced,
     scrapeMessages: scrapeMessagesEnhanced
   };
+  console.log('[RangeKeeper] ✅ Enhanced scraper ready: window.RangeKeeperEnhanced');
 }
