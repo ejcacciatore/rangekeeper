@@ -193,6 +193,14 @@ function scrapeAssignments() {
       return /Due date/i.test(text) && rect.height > 30 && rect.height < 300 && rect.width > 300;
     });
 
+    // If no cards yet — content still loading
+    if (cards.length === 0) {
+      console.log('[RangeKeeper] Calendar: no cards yet, content may still be loading...');
+      // Log what IS on the page to help debug
+      const mainText = (document.querySelector('main')?.textContent || '').substring(0, 500);
+      console.log('[RangeKeeper] Main content preview:', mainText);
+    }
+
     const deduped = dedupEls(cards);
     console.log(`[RangeKeeper] Calendar cards: ${deduped.length}`);
 
@@ -601,8 +609,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function init() {
   console.log('[RangeKeeper] 🎯 Initializing on UA Blackboard Ultra...');
 
-  // Initial scrape after page loads
-  setTimeout(runScraper, 2000);
+  // Initial scrape — wait longer for deadline/calendar page (content loads slowly)
+  const page = detectPage();
+  const waitMs = (page === 'calendar') ? 5000 : 2000;
+  setTimeout(runScraper, waitMs);
+
+  // Second pass 10 seconds later to catch lazy-loaded content
+  setTimeout(runScraper, 12000);
 
   // Watch for SPA navigation
   watchForNavigation();
