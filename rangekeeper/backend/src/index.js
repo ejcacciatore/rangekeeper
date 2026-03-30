@@ -290,6 +290,74 @@ app.get('/api/ics/feeds', async (req, res) => {
 });
 
 /**
+ * GET /api/class/:courseId
+ * Returns all data for a specific class (for class detail page)
+ */
+app.get('/api/class/:courseId', async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    
+    console.log(`[API] Fetching class data for: ${courseId}`);
+
+    // Get all assignments for this course
+    const assignments = await db.all(
+      `SELECT * FROM assignments WHERE course_id = ? ORDER BY due_date ASC`,
+      [courseId]
+    ) || [];
+
+    // Get all grades for this course
+    const grades = await db.all(
+      `SELECT * FROM grades WHERE course_id = ? ORDER BY scraped_at DESC`,
+      [courseId]
+    ) || [];
+
+    // Get all messages for this course
+    const messages = await db.all(
+      `SELECT * FROM messages WHERE course_id = ? ORDER BY date DESC LIMIT 10`,
+      [courseId]
+    ) || [];
+
+    // Calculate priority for each assignment
+    const assignmentsWithPriority = assignments.map(a => {
+      const priority = calculatePriority(a);
+      return {
+        ...a,
+        priority: priority,
+        priorityLabel: getPriorityLabel(priority),
+        priorityColor: getPriorityColor(priority)
+      };
+    });
+
+    // Sort by priority (urgent first)
+    const priorityOrder = { urgent: 0, soon: 1, later: 2, done: 3 };
+    assignmentsWithPriority.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+    // Calculate overall grade
+    const overallGrade = grades.find(g => !g.assignment_name || g.assignment_name === '__OVERALL__');
+
+    const classData = {
+      courseId: courseId,
+      assignments: assignmentsWithPriority,
+      grades: {
+        overall: overallGrade,
+        all: grades
+      },
+      messages: messages.map(m => ({
+        ...m,
+        isUnread: m.is_unread === 1
+      })),
+      lastSyncedAt: Date.now()
+    };
+
+    console.log(`[API] Returning class data: ${assignments.length} assignments, ${grades.length} grades, ${messages.length} messages`);
+    res.json(classData);
+  } catch (err) {
+    console.error('[API] Error fetching class data:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /health
  * Health check endpoint
  */
@@ -308,6 +376,79 @@ app.get('/health', (req, res) => {
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Calculate priority based on due date and grade
+ */
+function calculatePriority(assignment) {
+  if (!assignment) return 'later';
+  
+  const now = new Date();
+  const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
+  
+  // If no due date, can't calculate
+  if (!dueDate || isNaN(dueDate.getTime())) return 'later';
+  
+  const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+  
+  // Overdue or due today or failed = URGENT
+  if (hoursUntilDue < 0) return 'urgent'; // Overdue
+  if (hoursUntilDue <= 24) return 'urgent'; // Due today/tonight
+  if (assignment.status === 'failed' || (assignment.percentage && assignment.percentage < 60)) return 'urgent'; // Failed grade
+  
+  // Due within 3 days = SOON
+  if (hoursUntilDue <= 72) return 'soon';
+  
+  // Due later = LATER
+  if (hoursUntilDue > 72) return 'later';
+  
+  // Default
+  return 'later';
+}
+
+/**
+ * Get human-readable priority label
+ */
+function getPriorityLabel(priority) {
+  const labels = {
+    urgent: 'URGENT',
+    soon: 'SOON',
+    later: 'LATER',
+    done: 'DONE'
+  };
+  return labels[priority] || 'LATER';
+}
+
+/**
+ * Get color for priority
+ */
+function getPriorityColor(priority) {
+  const colors = {
+    urgent: '#dc2626', // Red
+    soon: '#f59e0b',   // Orange/Yellow
+    later: '#10b981',  // Green
+    done: '#6b7280'    // Gray
+  };
+  return colors[priority] || '#10b981';
+}
+
+/**
+ * Calculate grade trend (improving, stable, declining)
+ */
+function calculateTrend(recentGrades) {
+  if (recentGrades.length < 2) return 'stable';
+  
+  const scores = recentGrades.map(g => parseFloat(g.percentage || 0)).filter(s => s > 0);
+  if (scores.length < 2) return 'stable';
+  
+  const first = scores[0];
+  const last = scores[scores.length - 1];
+  const diff = last - first;
+  
+  if (diff > 5) return 'improving';
+  if (diff < -5) return 'declining';
+  return 'stable';
+}
 
 async function ensureGradesTables() {
   await db.run(`CREATE TABLE IF NOT EXISTS grades (
