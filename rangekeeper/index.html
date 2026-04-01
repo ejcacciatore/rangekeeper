@@ -280,7 +280,8 @@
     <script src="assets/js/data.js"></script>
     <script>
         const { 
-            loadData, 
+            loadData,
+            reloadData,
             getDueToday, 
             getDueThisWeek, 
             getOverdue,
@@ -294,7 +295,17 @@
         } = window.RangeKeeperData;
         
         async function init() {
-            const data = await loadData();
+            await renderDashboard();
+            
+            // Auto-refresh every 10 seconds
+            setInterval(async () => {
+                console.log('[RangeKeeper] Auto-refreshing data...');
+                await renderDashboard();
+            }, 10000);
+        }
+        
+        async function renderDashboard() {
+            const data = await reloadData();
             
             // Update greeting
             const hour = new Date().getHours();

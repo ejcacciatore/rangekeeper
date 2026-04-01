@@ -1,20 +1,106 @@
 // RangeKeeper Data Fetcher
-// Loads data from latest.json and provides helper functions
+// Loads data from IndexedDB (populated by extension)
 
 let cachedData = null;
+let db = null;
+
+// Open IndexedDB connection
+async function openDatabase() {
+  if (db) return db;
+  
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('rangekeeper-db', 1);
+    
+    request.onerror = () => {
+      console.error('[RangeKeeper] Failed to open IndexedDB:', request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      db = request.result;
+      console.log('[RangeKeeper] ✅ Connected to IndexedDB');
+      resolve(db);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      
+      if (!db.objectStoreNames.contains('courses')) {
+        db.createObjectStore('courses', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('assignments')) {
+        const assignmentStore = db.createObjectStore('assignments', { keyPath: 'id' });
+        assignmentStore.createIndex('course_id', 'course_id', { unique: false });
+        assignmentStore.createIndex('due_date', 'due_date', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('grades')) {
+        db.createObjectStore('grades', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('messages')) {
+        db.createObjectStore('messages', { keyPath: 'id' });
+      }
+    };
+  });
+}
+
+// Load all records from a store
+async function getAllFromStore(storeName) {
+  const database = await openDatabase();
+  
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([storeName], 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    
+    request.onsuccess = () => {
+      console.log(`[RangeKeeper] Loaded ${request.result.length} items from ${storeName}`);
+      resolve(request.result);
+    };
+    
+    request.onerror = () => {
+      console.error(`[RangeKeeper] Failed to load ${storeName}:`, request.error);
+      reject(request.error);
+    };
+  });
+}
 
 async function loadData() {
   if (cachedData) return cachedData;
   
   try {
-    const response = await fetch('data/latest.json');
-    if (!response.ok) throw new Error('Failed to fetch data');
-    cachedData = await response.json();
+    const [courses, assignments, grades, messages] = await Promise.all([
+      getAllFromStore('courses'),
+      getAllFromStore('assignments'),
+      getAllFromStore('grades'),
+      getAllFromStore('messages')
+    ]);
+    
+    cachedData = {
+      courses,
+      assignments,
+      grades,
+      messages,
+      generated_at: Date.now()
+    };
+    
+    console.log('[RangeKeeper] ✅ Data loaded:', {
+      courses: courses.length,
+      assignments: assignments.length,
+      grades: grades.length,
+      messages: messages.length
+    });
+    
     return cachedData;
   } catch (error) {
-    console.error('[RangeKeeper] Failed to load data:', error);
-    return { courses: [], assignments: [], grades: [], generated_at: 0 };
+    console.error('[RangeKeeper] Failed to load data from IndexedDB:', error);
+    return { courses: [], assignments: [], grades: [], messages: [], generated_at: 0 };
   }
+}
+
+// Reload data (clear cache and fetch fresh)
+async function reloadData() {
+  cachedData = null;
+  return loadData();
 }
 
 function getDueToday(assignments) {
@@ -123,6 +209,7 @@ function getCourseColor(courseId) {
 // Export functions
 window.RangeKeeperData = {
   loadData,
+  reloadData,
   getDueToday,
   getDueThisWeek,
   getOverdue,
