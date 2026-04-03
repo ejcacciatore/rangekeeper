@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RangeKeeper Selector Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #9E1B32;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .controls {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        button {
+            padding: 0.8rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: #9E1B32;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #7a1626;
+        }
+        
+        .btn-secondary {
+            background: #667EEA;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+        
+        .results {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .result-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .result-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .result-status {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .status-success {
+            background: #D1F2EB;
+            color: #047857;
+        }
+        
+        .status-error {
+            background: #FED7D7;
+            color: #C53030;
+        }
+        
+        .status-info {
+            background: #BEE3F8;
+            color: #2C5282;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .dom-tree {
+            background: #f9f9f9;
+            border-left: 4px solid #9E1B32;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .dom-item {
+            margin: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .count {
+            background: #667EEA;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 RangeKeeper Selector Test</h1>
+            <p class="subtitle">Test scrapers with mock Blackboard DOM structure</p>
+        </header>
+        
+        <div class="controls">
+            <h2 style="margin-bottom: 1rem;">Test Controls</h2>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="testGradesActivity()">Test Activity Stream Grades</button>
+                <button class="btn-primary" onclick="testGradesPage()">Test Grades Page Scraper</button>
+                <button class="btn-secondary" onclick="testMessages()">Test Messages Landing</button>
+                <button class="btn-secondary" onclick="testMessageThread()">Test Message Thread</button>
+                <button class="btn-danger" onclick="clearResults()">Clear Results</button>
+            </div>
+            
+            <div style="background: #f0f4ff; padding: 1rem; border-radius: 6px; border-left: 4px solid #667EEA;">
+                <strong>💡 How to Use:</strong>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                    Click the buttons above to test each scraper. The mock DOM simulates real Blackboard pages.
+                    Results show what the scraper found. Use this to verify selectors before testing on ualearn.blackboard.com.
+                </p>
+            </div>
+        </div>
+        
+        <div class="results">
+            <div id="results-container"></div>
+            <div id="empty-state" style="text-align: center; color: #999; padding: 2rem;">
+                <p>No tests run yet. Click a button above to start.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mock Blackboard DOM -->
+    <div id="mock-dom" style="display:none;">
+        <!-- Activity Stream Mock -->
+        <div id="activity-mock">
+            <div class="streamItem">
+                <span>202610-EN-103-025</span>
+                <span>Grade posted: Quiz 1</span>
+                <span>95 / 100</span>
+                <span>Mar 27, 2026</span>
+            </div>
+            <div class="streamItem">
+                <span>202610-REL-100-919</span>
+                <span>Grade posted: Discussion Post</span>
+                <span>88 / 100</span>
+                <span>Mar 26, 2026</span>
+            </div>
+        </div>
+        
+        <!-- Grades Page Mock -->
+        <div id="grades-page-mock">
+            <table>
+                <tbody>
+                    <tr class="grade-row">
+                        <td>Module 1 Quiz</td>
+                        <td>Mar 30, 2026</td>
+                        <td>Graded</td>
+                        <td>45/50</td>
+                    </tr>
+                    <tr class="grade-row">
+                        <td>Module 2 Assignment</td>
+                        <td>Mar 28, 2026</td>
+                        <td>Graded</td>
+                        <td>30/30</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Messages Landing Mock -->
+        <div id="messages-mock">
+            <div class="message-row">
+                <span>ID: 413210.202610</span>
+                <span>202610-EN-103-025</span>
+                <span class="unread-badge">14</span>
+            </div>
+            <div class="message-row">
+                <span>ID: 401764.202610</span>
+                <span>202610-REL-100-919</span>
+                <span class="unread-badge">3</span>
+            </div>
+        </div>
+        
+        <!-- Message Thread Mock -->
+        <div id="thread-mock">
+            <div class="message-item">
+                <span class="sender">Thom O'Rourke</span>
+                <span class="to">To: All course members</span>
+                <span class="date">3/27/26</span>
+                <span class="preview">This is a test message about the assignment.</span>
+                <span class="unread">①</span>
+            </div>
+            <div class="message-item">
+                <span class="sender">Prof. Smith</span>
+                <span class="to">To: All course members</span>
+                <span class="date">3/25/26</span>
+                <span class="preview">Please review Chapter 5 before next class.</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simple mock scrapers for testing (matching the extension code)
+        
+        function testGradesActivity() {
+            clearResults();
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            const mockDOM = document.getElementById('activity-mock');
+            const grades = [];
+            
+            mockDOM.querySelectorAll('.streamItem').forEach((item, idx) => {
+                const text = item.textContent;
+                const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+                const scoreMatch = text.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+                const dateMatch = text.match(/([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})/);
+                
+                grades.push({
+                    course: codeMatch ? codeMatch[1] : 'Unknown',
+                    assignment: text.match(/Grade posted:\s*(.+?)(?:\s*\d|$)/) ? text.match(/Grade posted:\s*(.+?)(?:\s*\d|$)/)[1] : 'Unknown',
+                    score: scoreMatch ? scoreMatch[1] : 'N/A',
+                    possible: scoreMatch ? scoreMatch[2] : 'N/A',
+                    date: dateMatch ? dateMatch[1] : 'Unknown'
+                });
+            });
+            
+            let html = '<div class="result-section">';
+            html += '<div class="result-title">Activity Stream Grades <span class="result-status status-success">FOUND ' + grades.length + '</span></div>';
+            html += '<pre>' + JSON.stringify(grades, null, 2) + '</pre>';
+            html += '</div>';
+            
+            container.innerHTML = html;
+            document.getElementById('empty-state').style.display = 'none';
+        }
+        
+        function testGradesPage() {
+            clearResults();
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            const mockDOM = document.getElementById('grades-page-mock');
+            const grades = [];
+            
+            mockDOM.querySelectorAll('.grade-row').forEach((row) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    grades.push({
+                        assignment: cells[0].textContent,
+                        dueDate: cells[1].textContent,
+                        status: cells[2].textContent,
+                        score: cells[3].textContent
+                    });
+                }
+            });
+            
+            let html = '<div class="result-section">';
+            html += '<div class="result-title">Grades Page <span class="result-status status-success">FOUND ' + grades.length + '</span></div>';
+            html += '<pre>' + JSON.stringify(grades, null, 2) + '</pre>';
+            html += '</div>';
+            
+            container.innerHTML = html;
+            document.getElementById('empty-state').style.display = 'none';
+        }
+        
+        function testMessages() {
+            clearResults();
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            const mockDOM = document.getElementById('messages-mock');
+            const messages = [];
+            
+            mockDOM.querySelectorAll('.message-row').forEach((row) => {
+                const text = row.textContent;
+                const idMatch = text.match(/ID:\s*(\d+\.\d+)/);
+                const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+                const badgeMatch = text.match(/(\d{1,2})(?:\s|$)/);
+                
+                messages.push({
+                    id: idMatch ? idMatch[1] : 'Unknown',
+                    course: codeMatch ? codeMatch[1] : 'Unknown',
+                    unreadCount: badgeMatch ? parseInt(badgeMatch[1]) : 0
+                });
+            });
+            
+            let html = '<div class="result-section">';
+            html += '<div class="result-title">Messages Landing <span class="result-status status-success">FOUND ' + messages.length + '</span></div>';
+            html += '<pre>' + JSON.stringify(messages, null, 2) + '</pre>';
+            html += '</div>';
+            
+            container.innerHTML = html;
+            document.getElementById('empty-state').style.display = 'none';
+        }
+        
+        function testMessageThread() {
+            clearResults();
+            const container = document.getElementById('results-container');
+            container.innerHTML = '';
+            
+            const mockDOM = document.getElementById('thread-mock');
+            const messages = [];
+            
+            mockDOM.querySelectorAll('.message-item').forEach((item) => {
+                messages.push({
+                    sender: item.querySelector('.sender')?.textContent || 'Unknown',
+                    to: item.querySelector('.to')?.textContent || 'Unknown',
+                    date: item.querySelector('.date')?.textContent || 'Unknown',
+                    preview: item.querySelector('.preview')?.textContent || 'No preview',
+                    unread: item.querySelector('.unread')?.textContent ? true : false
+                });
+            });
+            
+            let html = '<div class="result-section">';
+            html += '<div class="result-title">Message Thread <span class="result-status status-success">FOUND ' + messages.length + '</span></div>';
+            html += '<pre>' + JSON.stringify(messages, null, 2) + '</pre>';
+            html += '</div>';
+            
+            container.innerHTML = html;
+            document.getElementById('empty-state').style.display = 'none';
+        }
+        
+        function clearResults() {
+            document.getElementById('results-container').innerHTML = '';
+            document.getElementById('empty-state').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
