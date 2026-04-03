@@ -3,688 +3,493 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Massimo's Spring 2026 — Academic Report</title>
+    <title>RangeKeeper Student Report — Massimo (Spring 2026)</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
             line-height: 1.6;
-            color: #1a1a1a;
-            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-            padding: 40px 20px;
         }
-        
+
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
-        
+
         .header {
-            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            background: linear-gradient(135deg, #9E1B32 0%, #7a1527 100%);
             color: white;
-            padding: 40px;
+            padding: 3rem 2rem;
             text-align: center;
         }
-        
+
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
             font-weight: 700;
         }
-        
-        .header .subtitle {
-            font-size: 1.3em;
-            opacity: 0.95;
-            font-weight: 300;
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
-        
-        .meta {
-            background: #f8f9fa;
-            padding: 20px 40px;
-            border-bottom: 3px solid #8B0000;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
+
+        .report-date {
+            background: rgba(255,255,255,0.1);
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
         }
-        
-        .meta-item {
-            margin: 5px 0;
-        }
-        
-        .meta-label {
-            font-weight: 600;
-            color: #8B0000;
-        }
-        
+
         .content {
-            padding: 40px;
+            padding: 2rem;
         }
-        
-        .section {
-            margin-bottom: 40px;
-        }
-        
-        .section-title {
-            font-size: 1.8em;
-            color: #8B0000;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-        }
-        
-        .section-title .emoji {
-            margin-right: 15px;
-            font-size: 1.2em;
-        }
-        
-        .metric-grid {
+
+        .summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
         }
-        
-        .metric-card {
-            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-            color: white;
-            padding: 25px;
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 1.5rem;
             border-radius: 8px;
             text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        
-        .metric-value {
-            font-size: 2.5em;
-            font-weight: 700;
-            margin-bottom: 5px;
+
+        .stat-card h3 {
+            font-size: 2.5rem;
+            color: #9E1B32;
+            margin-bottom: 0.5rem;
         }
-        
-        .metric-label {
-            font-size: 0.9em;
-            opacity: 0.9;
+
+        .stat-card p {
+            color: #555;
+            font-size: 0.95rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
-        
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #9E1B32;
+        }
+
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
         .course-card {
             background: #f8f9fa;
-            border-left: 4px solid #8B0000;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-radius: 4px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
         }
-        
-        .course-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            border-color: #9E1B32;
         }
-        
-        .course-name {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #1a1a1a;
+
+        .course-card h3 {
+            color: #9E1B32;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
         }
-        
-        .course-code {
-            font-size: 0.9em;
+
+        .course-card .instructor {
             color: #666;
-            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
         }
-        
-        .instructor {
-            color: #555;
-            font-size: 0.95em;
+
+        .course-meta {
+            font-size: 0.85rem;
+            color: #888;
         }
-        
-        .instructor-icon {
-            margin-right: 8px;
+
+        .assignments-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
         }
-        
-        .assignment-list {
-            list-style: none;
-        }
-        
+
         .assignment-item {
-            background: white;
-            border-left: 4px solid #ddd;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.2s;
+            transition: background 0.2s ease;
         }
-        
+
         .assignment-item:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transform: translateX(5px);
+            background: #e9ecef;
         }
-        
-        .assignment-item.urgent {
-            border-left-color: #dc2626;
-            background: #fef2f2;
+
+        .assignment-item:last-child {
+            border-bottom: none;
         }
-        
-        .assignment-item.soon {
-            border-left-color: #f59e0b;
-            background: #fef3c7;
-        }
-        
-        .assignment-item.upcoming {
-            border-left-color: #3b82f6;
-            background: #eff6ff;
-        }
-        
+
         .assignment-title {
-            flex: 1;
-            font-weight: 500;
-            color: #1a1a1a;
-        }
-        
-        .assignment-date {
-            display: flex;
-            align-items: center;
-            margin-left: 20px;
-        }
-        
-        .date-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
             font-weight: 600;
-            white-space: nowrap;
+            color: #333;
+            margin-bottom: 0.25rem;
         }
-        
-        .date-badge.urgent {
-            background: #dc2626;
-            color: white;
-        }
-        
-        .date-badge.soon {
-            background: #f59e0b;
-            color: white;
-        }
-        
-        .date-badge.upcoming {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        .date-badge.normal {
-            background: #10b981;
-            color: white;
-        }
-        
-        .alert {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        
-        .alert-title {
-            font-weight: 700;
-            color: #92400e;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-        
-        .alert-content {
-            color: #78350f;
-            line-height: 1.7;
-        }
-        
-        .footer {
-            background: #1f2937;
-            color: white;
-            padding: 30px 40px;
-            text-align: center;
-        }
-        
-        .footer-content {
-            opacity: 0.8;
-            font-size: 0.9em;
-        }
-        
-        .days-until {
-            font-size: 0.85em;
+
+        .assignment-meta {
+            font-size: 0.85rem;
             color: #666;
-            margin-left: 10px;
         }
-        
-        .emoji-icon {
-            margin-right: 8px;
+
+        .due-date {
+            text-align: right;
         }
-        
-        .study-tips {
-            background: #eff6ff;
-            border-left: 4px solid #3b82f6;
-            padding: 20px;
-            border-radius: 4px;
-            margin-top: 20px;
+
+        .due-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 0.25rem;
         }
-        
-        .study-tips h4 {
-            color: #1e40af;
-            margin-bottom: 15px;
-            font-size: 1.2em;
+
+        .date {
+            font-weight: 600;
+            color: #9E1B32;
         }
-        
-        .study-tips ul {
-            padding-left: 20px;
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
         }
-        
-        .study-tips li {
-            margin: 10px 0;
-            line-height: 1.7;
+
+        .status-upcoming {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-due-soon {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .status-overdue {
+            background: #fecaca;
+            color: #991b1b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .dashboard-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: #9E1B32;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-link:hover {
+            background: #7a1527;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(158, 27, 50, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .courses-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .assignment-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            
+            .due-date {
+                text-align: left;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎓 Massimo's Academic Dashboard</h1>
-            <div class="subtitle">Spring 2026 — University of Alabama</div>
+            <h1>📚 Student Progress Report</h1>
+            <p>Massimo — Spring 2026 Semester</p>
+            <div class="report-date">Generated: April 3, 2026</div>
         </div>
-        
-        <div class="meta">
-            <div class="meta-item">
-                <span class="meta-label">Generated:</span> Monday, March 30, 2026 — 11:16 UTC
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">Term:</span> Spring 2026
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">Total Courses:</span> 6
-            </div>
-            <div class="meta-item">
-                <span class="meta-label">Upcoming Assignments:</span> 18
-            </div>
-        </div>
-        
+
         <div class="content">
+            <!-- Summary Stats -->
+            <div class="summary">
+                <div class="stat-card">
+                    <h3>6</h3>
+                    <p>Active Courses</p>
+                </div>
+                <div class="stat-card">
+                    <h3>19</h3>
+                    <p>Assignments Tracked</p>
+                </div>
+                <div class="stat-card">
+                    <h3>3</h3>
+                    <p>Due This Week</p>
+                </div>
+                <div class="stat-card">
+                    <h3>100%</h3>
+                    <p>System Uptime</p>
+                </div>
+            </div>
+
+            <!-- Courses Section -->
             <div class="section">
-                <h2 class="section-title">
-                    <span class="emoji">📊</span>
-                    Quick Stats
-                </h2>
-                
-                <div class="metric-grid">
-                    <div class="metric-card">
-                        <div class="metric-value">6</div>
-                        <div class="metric-label">Active Courses</div>
+                <h2>📖 Spring 2026 Courses</h2>
+                <div class="courses-grid">
+                    <div class="course-card">
+                        <h3>MATH-125-007</h3>
+                        <div class="instructor">👨‍🏫 Jedidiah Agyei</div>
+                        <div class="course-meta">Calculus I • Section 007</div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value">18</div>
-                        <div class="metric-label">Assignments</div>
+
+                    <div class="course-card">
+                        <h3>MATH-125-107</h3>
+                        <div class="instructor">👨‍🏫 Jedidiah Agyei</div>
+                        <div class="course-meta">Calculus I Lab • Section 107</div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value">3</div>
-                        <div class="metric-label">Due This Week</div>
+
+                    <div class="course-card">
+                        <h3>ENGR-101-006</h3>
+                        <div class="instructor">👩‍🏫 Bridgett Monk</div>
+                        <div class="course-meta">Introduction to Engineering</div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value">15</div>
-                        <div class="metric-label">Days Until Next</div>
+
+                    <div class="course-card">
+                        <h3>UA-101-030</h3>
+                        <div class="instructor">👨‍🏫 Pete Ludovice</div>
+                        <div class="course-meta">First-Year Seminar</div>
+                    </div>
+
+                    <div class="course-card">
+                        <h3>REL-100-919</h3>
+                        <div class="instructor">👥 Multiple Instructors</div>
+                        <div class="course-meta">Introduction to Religion</div>
+                    </div>
+
+                    <div class="course-card">
+                        <h3>EN-103-025</h3>
+                        <div class="instructor">👨‍🏫 Thom O'Rourke</div>
+                        <div class="course-meta">English Composition</div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Upcoming Assignments -->
             <div class="section">
-                <h2 class="section-title">
-                    <span class="emoji">📚</span>
-                    Your Courses
-                </h2>
-                
-                <div class="course-card">
-                    <div class="course-header">
+                <h2>📅 Upcoming Assignments (Next 30 Days)</h2>
+                <div class="assignments-list">
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">English Composition</div>
-                            <div class="course-code">EN-103-025</div>
+                            <div class="assignment-title">Module 6 Quiz</div>
+                            <div class="assignment-meta">📐 Mathematics</div>
+                            <span class="status-badge status-overdue">Overdue</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 24, 2026</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👨‍🏫</span>
-                        Instructor: Thom O'Rourke
-                    </div>
-                </div>
-                
-                <div class="course-card">
-                    <div class="course-header">
+
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">Introduction to Engineering</div>
-                            <div class="course-code">ENGR-101-006</div>
+                            <div class="assignment-title">Family Resemblance Characteristics Discussion</div>
+                            <div class="assignment-meta">✍️ Religion Course</div>
+                            <span class="status-badge status-overdue">Overdue</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 24, 2026 11:59 PM</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👩‍🏫</span>
-                        Instructor: Bridgett Monk
-                    </div>
-                </div>
-                
-                <div class="course-card">
-                    <div class="course-header">
+
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">Calculus I</div>
-                            <div class="course-code">MATH-125-007</div>
+                            <div class="assignment-title">TED Talk — Noah Feldman Discussion</div>
+                            <div class="assignment-meta">🎥 Religion Course</div>
+                            <span class="status-badge status-overdue">Overdue</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 24, 2026 11:59 PM</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👨‍🏫</span>
-                        Instructor: Jedidiah Agyei
-                    </div>
-                </div>
-                
-                <div class="course-card">
-                    <div class="course-header">
+
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">Calculus I (Lab)</div>
-                            <div class="course-code">MATH-125-107</div>
+                            <div class="assignment-title">Module 7 Quiz</div>
+                            <div class="assignment-meta">📐 Mathematics</div>
+                            <span class="status-badge status-overdue">Overdue</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 31, 2026</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👨‍🏫</span>
-                        Instructor: Jedidiah Agyei
-                    </div>
-                </div>
-                
-                <div class="course-card">
-                    <div class="course-header">
+
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">Introduction to Religion</div>
-                            <div class="course-code">REL-100-919</div>
+                            <div class="assignment-title">Eating With Cannibals Discussion</div>
+                            <div class="assignment-meta">🗣️ Religion Course</div>
+                            <span class="status-badge status-upcoming">Due This Week</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 31, 2026 11:59 PM</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👥</span>
-                        Multiple Instructors
-                    </div>
-                </div>
-                
-                <div class="course-card">
-                    <div class="course-header">
+
+                    <div class="assignment-item">
                         <div>
-                            <div class="course-name">University Success</div>
-                            <div class="course-code">UA-101-030</div>
+                            <div class="assignment-title">Suri Lip Discussion</div>
+                            <div class="assignment-meta">🗣️ Religion Course</div>
+                            <span class="status-badge status-upcoming">Due This Week</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Mar 31, 2026 11:59 PM</div>
                         </div>
                     </div>
-                    <div class="instructor">
-                        <span class="instructor-icon">👨‍🏫</span>
-                        Instructor: Pete Ludovice
+
+                    <div class="assignment-item">
+                        <div>
+                            <div class="assignment-title">Module 8 Quiz</div>
+                            <div class="assignment-meta">📐 Mathematics</div>
+                            <span class="status-badge status-upcoming">Upcoming</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Apr 7, 2026</div>
+                        </div>
+                    </div>
+
+                    <div class="assignment-item">
+                        <div>
+                            <div class="assignment-title">Heaven's Gate Reaction Discussion</div>
+                            <div class="assignment-meta">🎬 Religion Course</div>
+                            <span class="status-badge status-upcoming">Upcoming</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Apr 7, 2026 11:59 PM</div>
+                        </div>
+                    </div>
+
+                    <div class="assignment-item">
+                        <div>
+                            <div class="assignment-title">Making the Strange Familiar Discussion</div>
+                            <div class="assignment-meta">🤔 Religion Course</div>
+                            <span class="status-badge status-upcoming">Upcoming</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Apr 7, 2026 11:59 PM</div>
+                        </div>
+                    </div>
+
+                    <div class="assignment-item">
+                        <div>
+                            <div class="assignment-title">Alternative Writing Assignment</div>
+                            <div class="assignment-meta">📝 UA-101</div>
+                            <span class="status-badge status-upcoming">Upcoming</span>
+                        </div>
+                        <div class="due-date">
+                            <div class="due-label">Due Date</div>
+                            <div class="date">Apr 10, 2026</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Grades Section -->
             <div class="section">
-                <h2 class="section-title">
-                    <span class="emoji">📝</span>
-                    Upcoming Assignments
-                </h2>
-                
-                <div class="alert">
-                    <div class="alert-title">⚠️ Urgent — Due This Week!</div>
-                    <div class="alert-content">
-                        You have <strong>3 assignments</strong> due by Thursday, March 27th. Start on these first!
-                    </div>
-                </div>
-                
-                <ul class="assignment-list">
-                    <li class="assignment-item urgent">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📖</span>
-                            <strong>Module 6 Quiz</strong> — REL-100
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge urgent">Thu, Mar 27 @ 12:00 AM</span>
-                            <span class="days-until">In 2 days ⏰</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item urgent">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Family Resemblance Characteristics Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge urgent">Thu, Mar 27 @ 12:59 AM</span>
-                            <span class="days-until">In 2 days ⏰</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item urgent">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            TED Talk — Noah Feldman Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge urgent">Thu, Mar 27 @ 12:59 AM</span>
-                            <span class="days-until">In 2 days ⏰</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item soon">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📖</span>
-                            <strong>Module 7 Quiz</strong> — REL-100
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge soon">Thu, Apr 3 @ 12:00 AM</span>
-                            <span class="days-until">In 9 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item soon">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Eating With Cannibals Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge soon">Thu, Apr 3 @ 12:59 AM</span>
-                            <span class="days-until">In 9 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item soon">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Suri Lip Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge soon">Thu, Apr 3 @ 12:59 AM</span>
-                            <span class="days-until">In 9 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📖</span>
-                            <strong>Module 8 Quiz</strong> — REL-100
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Thu, Apr 10 @ 12:00 AM</span>
-                            <span class="days-until">In 16 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Heaven's Gate Reaction Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Thu, Apr 10 @ 12:59 AM</span>
-                            <span class="days-until">In 16 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Making the Strange Familiar Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Thu, Apr 10 @ 12:59 AM</span>
-                            <span class="days-until">In 16 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📝</span>
-                            Alternative Writing Assignment (Thriving Survey C)
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Fri, Apr 11 @ 12:00 AM</span>
-                            <span class="days-until">In 17 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💼</span>
-                            <strong>Assignment: Financial Planning (Materials)</strong> — UA-101
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Fri, Apr 11 @ 12:00 AM</span>
-                            <span class="days-until">In 17 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item upcoming">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💼</span>
-                            Professional Development 6 — ENGR-101
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge upcoming">Fri, Apr 11 @ 12:00 AM</span>
-                            <span class="days-until">In 17 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📖</span>
-                            <strong>Module 9 Quiz</strong> — REL-100
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Thu, Apr 17 @ 12:00 AM</span>
-                            <span class="days-until">In 23 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Rituals Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Thu, Apr 17 @ 12:59 AM</span>
-                            <span class="days-until">In 23 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📊</span>
-                            <strong>Student Success Analysis</strong> — UA-101
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Fri, Apr 18 @ 12:00 AM</span>
-                            <span class="days-until">In 24 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">📖</span>
-                            <strong>Module 10 Quiz</strong> — REL-100
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Thu, Apr 24 @ 12:00 AM</span>
-                            <span class="days-until">In 30 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Free Exercise of Religion Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Thu, Apr 24 @ 12:59 AM</span>
-                            <span class="days-until">In 30 days</span>
-                        </div>
-                    </li>
-                    
-                    <li class="assignment-item normal">
-                        <div class="assignment-title">
-                            <span class="emoji-icon">💬</span>
-                            Religion and Civic Discourse Discussion
-                        </div>
-                        <div class="assignment-date">
-                            <span class="date-badge normal">Thu, Apr 24 @ 12:59 AM</span>
-                            <span class="days-until">In 30 days</span>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            
-            <div class="section">
-                <h2 class="section-title">
-                    <span class="emoji">💡</span>
-                    Study Tips & Important Info
-                </h2>
-                
-                <div class="study-tips">
-                    <h4>📅 This Week's Game Plan (March 25-27)</h4>
-                    <ul>
-                        <li><strong>Today (Monday):</strong> Start Module 6 Quiz prep — review notes, practice problems</li>
-                        <li><strong>Tuesday:</strong> Work on TED Talk discussion post — watch video, write response</li>
-                        <li><strong>Wednesday:</strong> Finish Family Resemblance discussion + take Module 6 Quiz</li>
-                        <li><strong>Thursday morning:</strong> Final review, submit everything before midnight</li>
-                    </ul>
-                </div>
-                
-                <div class="study-tips" style="margin-top: 20px;">
-                    <h4>🎯 Key Patterns to Know</h4>
-                    <ul>
-                        <li><strong>REL-100:</strong> Quizzes due Thursdays at midnight, discussions due Thursdays at 12:59 AM (1 minute later!)</li>
-                        <li><strong>ENGR-101:</strong> Professional Development assignments typically due Fridays</li>
-                        <li><strong>UA-101:</strong> Major assignments (Financial Planning, Success Analysis) due mid-month</li>
-                        <li><strong>Discussion posts:</strong> Most require 2-3 paragraphs + respond to 2 classmates</li>
-                    </ul>
-                </div>
-                
-                <div class="alert" style="margin-top: 20px; background: #dcfce7; border-color: #10b981;">
-                    <div class="alert-title" style="color: #065f46;">✅ You're Doing Great!</div>
-                    <div class="alert-content" style="color: #064e3b;">
-                        You have a manageable workload. Focus on the 3 urgent items this week, then you'll have breathing room until April. Stay organized and you've got this! 💪
-                    </div>
+                <h2>📊 Recent Grades</h2>
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p>No grades posted yet</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Grades will appear here as instructors post them</p>
                 </div>
             </div>
         </div>
-        
+
         <div class="footer">
-            <div class="footer-content">
-                <strong>RangeKeeper Student Report</strong><br>
-                Generated for Massimo — University of Alabama<br>
-                Monday, March 30, 2026 — 11:16 UTC<br>
-                <br>
-                <em>Built by Dad 🐘 — Roll Tide!</em>
-            </div>
+            <p><strong>RangeKeeper Dashboard</strong> — Academic tracking for neurodivergent students</p>
+            <p style="margin-top: 0.5rem; font-size: 0.85rem;">Live data synced from University of Alabama Blackboard</p>
+            <a href="https://ejcacciatore.github.io/rangekeeper/" class="dashboard-link">
+                🚀 View Live Dashboard
+            </a>
         </div>
     </div>
 </body>
