@@ -1,0 +1,372 @@
+/* ============================================================================
+   RangeKeeper Popup — Clean, Accessible, ASD-Friendly Design
+   ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 420px;
+  min-height: 520px;
+  max-height: 600px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+}
+
+/* ---- Header ---- */
+header {
+  text-align: center;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ---- Stats Row ---- */
+.summary {
+  display: flex;
+  justify-content: space-around;
+  background: #16213e;
+  border-radius: 10px;
+  padding: 12px 8px;
+  margin-bottom: 12px;
+  border: 1px solid #0f3460;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e94560;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #8888aa;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- Tab Navigation ---- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: #16213e;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: #8888aa;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #e0e0e0;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.tab.active {
+  background: #e94560;
+  color: #fff;
+}
+
+/* ---- Tab Content ---- */
+.tab-content {
+  display: none;
+  background: #16213e;
+  border-radius: 10px;
+  padding: 8px;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid #0f3460;
+}
+
+.tab-content.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Item List ---- */
+.item-list {
+  overflow-y: auto;
+  max-height: 280px;
+  flex: 1;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid #0f3460;
+  transition: background 0.15s;
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:hover {
+  background: rgba(233, 69, 96, 0.05);
+}
+
+.item.clickable {
+  cursor: pointer;
+}
+
+.item.unread {
+  background: rgba(233, 69, 96, 0.08);
+  border-left: 3px solid #e94560;
+}
+
+.item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta {
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.item-date {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.item-right {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8888aa;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+/* ---- Section Headers ---- */
+.section-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e94560;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 8px 4px;
+  margin-top: 4px;
+}
+
+/* ---- Badges ---- */
+.course-tag {
+  display: inline-block;
+  background: #0f3460;
+  color: #8888cc;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-graded { background: #1a4a1a; color: #4caf50; }
+.badge-submitted { background: #1a3a4a; color: #42a5f5; }
+.badge-pending { background: #4a3a1a; color: #ffa726; }
+.badge-overdue { background: #4a1a1a; color: #ef5350; }
+.badge-not_started { background: #2a2a2a; color: #888; }
+.badge-in_progress { background: #1a3a4a; color: #42a5f5; }
+
+/* ---- Due Date Colors ---- */
+.overdue { color: #ef5350 !important; font-weight: 700; }
+.due-urgent { color: #ff5722 !important; font-weight: 700; animation: pulse 1.5s infinite; }
+.due-soon { color: #ffa726 !important; font-weight: 600; }
+.due-tomorrow { color: #ffca28 !important; }
+
+/* ---- Grade Colors ---- */
+.grade-a { color: #4caf50 !important; }
+.grade-b { color: #8bc34a !important; }
+.grade-c { color: #ffc107 !important; }
+.grade-d { color: #ff9800 !important; }
+.grade-f { color: #ef5350 !important; }
+.grade-letter { font-size: 18px !important; font-weight: 700 !important; color: #e94560 !important; }
+
+.overall-grade {
+  background: rgba(233, 69, 96, 0.08);
+  border-radius: 6px;
+}
+
+/* ---- Message Elements ---- */
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e94560;
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.unread-dot {
+  color: #e94560;
+  font-size: 10px;
+}
+
+.read-check {
+  color: #4caf50;
+  font-size: 14px;
+}
+
+/* ---- Empty State ---- */
+.empty-state {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  padding: 30px 15px;
+}
+
+.empty-state.error {
+  color: #ef5350;
+}
+
+/* ---- Footer ---- */
+footer {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #c73350;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.debug-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.btn-debug {
+  flex: 1;
+  padding: 6px 2px;
+  background: #0f3460;
+  color: #8888cc;
+  border: 1px solid #e94560;
+  border-radius: 5px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-debug:hover {
+  background: #e94560;
+  color: white;
+}
+
+.last-sync {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #666;
+}
+
+#last-sync-time {
+  font-weight: 600;
+  color: #8888aa;
+}
+
+/* ---- Scrollbar ---- */
+.item-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.item-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.item-list::-webkit-scrollbar-thumb {
+  background: #e94560;
+  border-radius: 2px;
+}
+
+/* ---- Animation ---- */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
