@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Massimo's Academic Dashboard — Spring 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #9E1B32 0%, #7a1527 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .report-date {
+            background: rgba(255,255,255,0.1);
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #9E1B32;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-box {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .alert-box h3 {
+            color: #dc2626;
+            margin-bottom: 0.75rem;
+            font-size: 1.3rem;
+        }
+
+        .alert-box p {
+            color: #7f1d1d;
+            line-height: 1.8;
+        }
+
+        .course-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 2px solid #e9ecef;
+        }
+
+        .course-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .course-title {
+            font-size: 1.4rem;
+            color: #9E1B32;
+            font-weight: 700;
+        }
+
+        .course-meta {
+            text-align: right;
+        }
+
+        .instructor {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .course-grade {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .assignment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .assignment-item {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 6px;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.2s ease;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .assignment-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+
+        .assignment-item.overdue {
+            border-left-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .assignment-item.due-soon {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .assignment-item.upcoming {
+            border-left-color: #3b82f6;
+        }
+
+        .assignment-item.completed {
+            border-left-color: #10b981;
+            opacity: 0.7;
+        }
+
+        .assignment-info h4 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+
+        .assignment-meta {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .due-date {
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .due-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 0.25rem;
+        }
+
+        .date {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .badge-overdue {
+            background: #dc2626;
+            color: white;
+        }
+
+        .badge-due-soon {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .badge-upcoming {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge-completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+            font-style: italic;
+        }
+
+        .grade-item {
+            background: white;
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .grade-info h4 {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .grade-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .score-excellent { color: #10b981; }
+        .score-good { color: #3b82f6; }
+        .score-fair { color: #f59e0b; }
+        .score-poor { color: #dc2626; }
+
+        .message-item {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .message-item.unread {
+            background: #eff6ff;
+            border-left-color: #9E1B32;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .message-date {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .message-subject {
+            font-weight: 600;
+            color: #9E1B32;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-body {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            font-size: 2.5rem;
+            color: #9E1B32;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card p {
+            color: #555;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            .assignment-item {
+                grid-template-columns: 1fr;
+            }
+            
+            .due-date {
+                text-align: left;
+            }
+
+            .status-badge {
+                justify-self: start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Academic Dashboard</h1>
+            <p style="font-size: 1.2rem; margin-top: 0.5rem;">Massimo — Spring 2026</p>
+            <div class="report-date">Updated: April 3, 2026</div>
+        </div>
+
+        <div class="content">
+            <!-- Summary Stats -->
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h3>6</h3>
+                    <p>Active Courses</p>
+                </div>
+                <div class="summary-card">
+                    <h3>4</h3>
+                    <p>Overdue Items</p>
+                </div>
+                <div class="summary-card">
+                    <h3>2</h3>
+                    <p>Due This Week</p>
+                </div>
+                <div class="summary-card">
+                    <h3>13</h3>
+                    <p>Upcoming</p>
+                </div>
+            </div>
+
+            <!-- Overdue Assignments Alert -->
+            <div class="alert-box">
+                <h3>⚠️ Urgent: 4 Overdue Assignments</h3>
+                <p><strong>Action needed:</strong> These assignments have passed their due dates. Contact your instructors to see if late submissions are accepted or if alternative credit is available.</p>
+            </div>
+
+            <!-- BY COURSE SECTIONS -->
+
+            <!-- MATH-125-007 -->
+            <div class="section">
+                <h2>📐 MATH-125-007 — Calculus I</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">Calculus I (Section 007)</div>
+                            <div class="instructor">👨‍🏫 Instructor: Jedidiah Agyei</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="assignment-list">
+                        <div class="assignment-item overdue">
+                            <div class="assignment-info">
+                                <h4>Module 6 Quiz</h4>
+                                <div class="assignment-meta">Mathematics • Quiz</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 24, 2026</div>
+                            </div>
+                            <div class="status-badge badge-overdue">OVERDUE</div>
+                        </div>
+
+                        <div class="assignment-item overdue">
+                            <div class="assignment-info">
+                                <h4>Module 7 Quiz</h4>
+                                <div class="assignment-meta">Mathematics • Quiz</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 31, 2026</div>
+                            </div>
+                            <div class="status-badge badge-overdue">OVERDUE</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Module 8 Quiz</h4>
+                                <div class="assignment-meta">Mathematics • Quiz</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 7, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">3 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Module 9 Quiz</h4>
+                                <div class="assignment-meta">Mathematics • Quiz</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 17, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">13 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Module 10 Quiz</h4>
+                                <div class="assignment-meta">Mathematics • Quiz</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 24, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">20 days</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+            <!-- REL-100-919 -->
+            <div class="section">
+                <h2>✝️ REL-100-919 — Introduction to Religion</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">Introduction to Religion</div>
+                            <div class="instructor">👥 Multiple Instructors</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="assignment-list">
+                        <div class="assignment-item overdue">
+                            <div class="assignment-info">
+                                <h4>Family Resemblance Characteristics Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 24, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-overdue">OVERDUE</div>
+                        </div>
+
+                        <div class="assignment-item overdue">
+                            <div class="assignment-info">
+                                <h4>TED Talk — Noah Feldman Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 24, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-overdue">OVERDUE</div>
+                        </div>
+
+                        <div class="assignment-item due-soon">
+                            <div class="assignment-info">
+                                <h4>Eating With Cannibals Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 31, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-due-soon">DUE TODAY</div>
+                        </div>
+
+                        <div class="assignment-item due-soon">
+                            <div class="assignment-info">
+                                <h4>Suri Lip Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Mar 31, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-due-soon">DUE TODAY</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Heaven's Gate Reaction Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 7, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">3 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Making the Strange Familiar and the Familiar Strange Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 7, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">3 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Rituals Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 17, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">13 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Free Exercise of Religion Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 24, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">20 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Religion and Civic Discourse Discussion</h4>
+                                <div class="assignment-meta">Discussion Post</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 24, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">20 days</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+            <!-- UA-101-030 -->
+            <div class="section">
+                <h2>🎓 UA-101-030 — First-Year Seminar</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">First-Year Seminar</div>
+                            <div class="instructor">👨‍🏫 Instructor: Pete Ludovice</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="assignment-list">
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Alternative Writing Assignment (Thriving Survey C)</h4>
+                                <div class="assignment-meta">Written Assignment</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 10, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">6 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Assignment: Financial Planning (Materials)</h4>
+                                <div class="assignment-meta">Written Assignment</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 10, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">6 days</div>
+                        </div>
+
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Student Success Analysis</h4>
+                                <div class="assignment-meta">Written Assignment • Due Apr 17</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 17, 2026</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">13 days</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+            <!-- ENGR-101-006 -->
+            <div class="section">
+                <h2>🔧 ENGR-101-006 — Introduction to Engineering</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">Introduction to Engineering</div>
+                            <div class="instructor">👩‍🏫 Instructor: Bridgett Monk</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="assignment-list">
+                        <div class="assignment-item upcoming">
+                            <div class="assignment-info">
+                                <h4>Professional Development 6</h4>
+                                <div class="assignment-meta">Assignment</div>
+                            </div>
+                            <div class="due-date">
+                                <div class="due-label">Due Date</div>
+                                <div class="date">Apr 10, 11:59 PM</div>
+                            </div>
+                            <div class="status-badge badge-upcoming">6 days</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+            <!-- EN-103-025 -->
+            <div class="section">
+                <h2>📝 EN-103-025 — English Composition</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">English Composition</div>
+                            <div class="instructor">👨‍🏫 Instructor: Thom O'Rourke</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="empty-state">No assignments tracked yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+            <!-- MATH-125-107 -->
+            <div class="section">
+                <h2>📐 MATH-125-107 — Calculus I Lab</h2>
+                <div class="course-section">
+                    <div class="course-header">
+                        <div>
+                            <div class="course-title">Calculus I Lab (Section 107)</div>
+                            <div class="instructor">👨‍🏫 Instructor: Jedidiah Agyei</div>
+                        </div>
+                        <div class="course-meta">
+                            <div class="course-grade">—</div>
+                            <div style="font-size: 0.85rem; color: #999;">Grade not posted</div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-bottom: 1rem; color: #555;">Assignments (by due date)</h3>
+                    <div class="empty-state">No assignments tracked yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Grades</h3>
+                    <div class="empty-state">No grades posted yet</div>
+
+                    <h3 style="margin: 1.5rem 0 1rem; color: #555;">Messages from Instructor</h3>
+                    <div class="empty-state">No messages</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="background: #f8f9fa; padding: 2rem; text-align: center; color: #666;">
+            <p><strong>RangeKeeper Dashboard</strong> — Academic tracking for neurodivergent students</p>
+            <p style="margin-top: 0.5rem; font-size: 0.85rem;">Data synced from University of Alabama Blackboard • April 3, 2026</p>
+        </div>
+    </div>
+</body>
+</html>
+<!-- Rebuild trigger: Fri Apr  3 21:34:43 UTC 2026 -->
