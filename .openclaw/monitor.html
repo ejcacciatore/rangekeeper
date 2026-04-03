@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Usage Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 2rem;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            border: 2px solid #00ff00;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            border: 1px solid #00ff00;
+            padding: 1.5rem;
+            background: rgba(0, 255, 0, 0.05);
+        }
+        
+        .card-title {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            color: #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #00aa00;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid #00ff00;
+        }
+        
+        .table th {
+            background: rgba(0, 255, 0, 0.1);
+            font-weight: bold;
+        }
+        
+        .table tr:hover {
+            background: rgba(0, 255, 0, 0.05);
+        }
+        
+        .chart {
+            height: 200px;
+            border: 1px solid #00ff00;
+            padding: 1rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+        
+        .bar {
+            flex: 1;
+            background: #00ff00;
+            position: relative;
+            transition: height 0.3s;
+        }
+        
+        .bar-label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+        
+        .alert {
+            border: 2px solid #ffaa00;
+            background: rgba(255, 170, 0, 0.1);
+            color: #ffaa00;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .refresh {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .refresh:hover {
+            background: rgba(0, 255, 0, 0.2);
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <button class="refresh" onclick="location.reload()">⟳ REFRESH</button>
+    
+    <div class="container">
+        <div class="header">
+            <h1>▓▓▓ OPENCLAW USAGE MONITOR ▓▓▓</h1>
+            <div id="last-update"></div>
+        </div>
+        
+        <div id="alert-container"></div>
+        
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Today</div>
+                <div class="stat" id="today-cost">$0.00</div>
+                <div class="stat-label" id="today-tokens">0 tokens • 0 sessions</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">This Week</div>
+                <div class="stat" id="week-cost">$0.00</div>
+                <div class="stat-label" id="week-tokens">0 tokens • 0 sessions</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Monthly Projection</div>
+                <div class="stat" id="month-projection">$0.00</div>
+                <div class="stat-label" id="month-efficiency">Efficiency: Excellent</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Primary Model</div>
+                <div class="stat" id="primary-model">—</div>
+                <div class="stat-label" id="primary-model-usage">0 sessions</div>
+            </div>
+        </div>
+        
+        <h2 style="margin-bottom: 1rem;">▓ 7-DAY TREND</h2>
+        <div class="chart" id="chart"></div>
+        
+        <h2 style="margin: 2rem 0 1rem 0;">▓ RECENT SESSIONS</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Model</th>
+                    <th>Tokens</th>
+                    <th>Cost</th>
+                    <th>Task</th>
+                </tr>
+            </thead>
+            <tbody id="sessions-table"></tbody>
+        </table>
+        
+        <h2 style="margin: 2rem 0 1rem 0;">▓ MODEL BREAKDOWN</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Sessions</th>
+                    <th>Tokens</th>
+                    <th>Total Cost</th>
+                    <th>Avg Cost/Session</th>
+                </tr>
+            </thead>
+            <tbody id="models-table"></tbody>
+        </table>
+    </div>
+    
+    <script>
+        async function loadData() {
+            const response = await fetch('usage-monitor.json');
+            const data = await response.json();
+            return data;
+        }
+        
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+        
+        function formatCost(cost) {
+            return '$' + cost.toFixed(4);
+        }
+        
+        function render(data) {
+            // Last update
+            document.getElementById('last-update').textContent = 
+                'Last updated: ' + formatDate(data.last_updated);
+            
+            // Today stats
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = data.daily_totals[today] || { total_tokens: 0, total_cost: 0, sessions: 0 };
+            
+            document.getElementById('today-cost').textContent = formatCost(todayData.total_cost);
+            document.getElementById('today-tokens').textContent = 
+                `${todayData.total_tokens.toLocaleString()} tokens • ${todayData.sessions} sessions`;
+            
+            // Week stats
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                last7Days.push(d.toISOString().split('T')[0]);
+            }
+            
+            let weekTotal = { tokens: 0, cost: 0, sessions: 0 };
+            last7Days.forEach(date => {
+                const day = data.daily_totals[date];
+                if (day) {
+                    weekTotal.tokens += day.total_tokens;
+                    weekTotal.cost += day.total_cost;
+                    weekTotal.sessions += day.sessions;
+                }
+            });
+            
+            document.getElementById('week-cost').textContent = formatCost(weekTotal.cost);
+            document.getElementById('week-tokens').textContent = 
+                `${weekTotal.tokens.toLocaleString()} tokens • ${weekTotal.sessions} sessions`;
+            
+            // Monthly projection
+            const avgDailyCost = weekTotal.cost / 7;
+            const monthlyProjection = avgDailyCost * 30;
+            
+            document.getElementById('month-projection').textContent = formatCost(monthlyProjection);
+            
+            let efficiency = 'Excellent';
+            if (avgDailyCost > 15) efficiency = 'Good';
+            if (avgDailyCost > 25) efficiency = 'Review';
+            document.getElementById('month-efficiency').textContent = 'Efficiency: ' + efficiency;
+            
+            // Alert if over budget
+            if (avgDailyCost > 25) {
+                document.getElementById('alert-container').innerHTML = `
+                    <div class="alert blink">
+                        <div class="alert-title">⚠ COST ALERT</div>
+                        Daily average ($${avgDailyCost.toFixed(2)}) exceeds target ($25). 
+                        Consider using cheaper models for bulk tasks.
+                    </div>
+                `;
+            }
+            
+            // Primary model
+            const modelStats = {};
+            data.sessions.forEach(s => {
+                if (!modelStats[s.model]) {
+                    modelStats[s.model] = { sessions: 0, tokens: 0, cost: 0 };
+                }
+                modelStats[s.model].sessions += 1;
+                modelStats[s.model].tokens += s.tokens_used;
+                modelStats[s.model].cost += s.cost;
+            });
+            
+            const topModel = Object.entries(modelStats)
+                .sort((a, b) => b[1].sessions - a[1].sessions)[0];
+            
+            if (topModel) {
+                const modelName = data.model_pricing[topModel[0]]?.name || topModel[0].split('/').pop();
+                document.getElementById('primary-model').textContent = modelName;
+                document.getElementById('primary-model-usage').textContent = 
+                    `${topModel[1].sessions} sessions`;
+            }
+            
+            // Chart
+            const chartHTML = last7Days.map(date => {
+                const day = data.daily_totals[date] || { total_cost: 0 };
+                const maxCost = Math.max(...last7Days.map(d => 
+                    (data.daily_totals[d] || { total_cost: 0 }).total_cost
+                ));
+                const height = maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0;
+                
+                return `
+                    <div class="bar" style="height: ${height}%" title="$${day.total_cost.toFixed(2)}">
+                        <div class="bar-label">${date.substr(5)}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('chart').innerHTML = chartHTML;
+            
+            // Recent sessions
+            const sessionsHTML = data.sessions
+                .slice(-20)
+                .reverse()
+                .map(s => {
+                    const modelName = data.model_pricing[s.model]?.name || s.model.split('/').pop();
+                    return `
+                        <tr>
+                            <td>${formatDate(s.timestamp)}</td>
+                            <td>${modelName}</td>
+                            <td>${s.tokens_used.toLocaleString()}</td>
+                            <td>${formatCost(s.cost)}</td>
+                            <td>${s.task}</td>
+                        </tr>
+                    `;
+                }).join('');
+            document.getElementById('sessions-table').innerHTML = sessionsHTML;
+            
+            // Model breakdown
+            const modelsHTML = Object.entries(modelStats)
+                .sort((a, b) => b[1].cost - a[1].cost)
+                .map(([model, stats]) => {
+                    const name = data.model_pricing[model]?.name || model.split('/').pop();
+                    const avgCost = stats.cost / stats.sessions;
+                    return `
+                        <tr>
+                            <td>${name}</td>
+                            <td>${stats.sessions}</td>
+                            <td>${stats.tokens.toLocaleString()}</td>
+                            <td>${formatCost(stats.cost)}</td>
+                            <td>${formatCost(avgCost)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            document.getElementById('models-table').innerHTML = modelsHTML;
+        }
+        
+        // Load and render
+        loadData().then(render);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => loadData().then(render), 30000);
+    </script>
+</body>
+</html>

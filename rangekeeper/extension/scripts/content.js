@@ -645,9 +645,10 @@ if (document.readyState === 'loading') {
 
 // ============================================================================
 // DEBUG CONSOLE OBJECT (content script world — for internal use)
+// Works around Blackboard's SES sandbox by injecting into page world
 // ============================================================================
 
-window.RangeKeeperDebug = {
+const DebugObject = {
   help: () => {
     console.log(`
 🎯 RangeKeeper Debug Console
@@ -746,5 +747,191 @@ RangeKeeperDebug.testBackend()    → Test backend connection
     } catch (e) {
       console.error('[RangeKeeper] ❌ Backend unreachable. Is it running on localhost:3000?', e.message);
     }
+  },
+
+  // Enhanced scrapers (Phase 2)
+  gradesOverviewEnhanced: () => {
+    if (typeof scrapeGradesOverviewEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeGradesOverviewEnhanced();
+    console.log('[RangeKeeper] Enhanced grades overview:', r);
+    return r;
+  },
+
+  gradebookEnhanced: () => {
+    if (typeof scrapeGradebookEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeGradebookEnhanced();
+    console.log('[RangeKeeper] Enhanced gradebook:', r);
+    return r;
+  },
+
+  messagesEnhanced: () => {
+    if (typeof scrapeMessagesEnhanced !== 'function') return console.error('Enhanced scraper not loaded');
+    const r = scrapeMessagesEnhanced();
+    console.log('[RangeKeeper] Enhanced messages:', r);
+    return r;
   }
 };
+
+// Expose to window for console access (content script world)
+window.RangeKeeperDebug = DebugObject;
+
+// Inject into page world to bypass SES sandbox using eval-safe method
+try {
+  // Create a script that runs in page context (not content script context)
+  // This bypasses SES restrictions because it's in the main page world
+  const injectScript = document.createElement('script');
+  injectScript.type = 'text/javascript';
+  injectScript.id = 'rangekeeper-debug-injector';
+  
+  // Define the debug object and all methods inline
+  injectScript.textContent = `
+(function() {
+  // Create a simple debug interface that communicates with content script
+  window.RangeKeeperDebug = {
+    help: function() {
+      console.log(\`
+🎯 RangeKeeper Debug Console
+─────────────────────────────────────────
+RangeKeeperDebug.page()           → What page am I on?
+RangeKeeperDebug.run()            → Run the scraper for this page
+RangeKeeperDebug.grades()         → Scrape grades (grades page)
+RangeKeeperDebug.activity()       → Scrape grade postings (activity stream)
+RangeKeeperDebug.messages()       → Scrape message threads (messages landing)
+RangeKeeperDebug.thread()         → Scrape messages in current course
+RangeKeeperDebug.feedback()       → Scrape feedback (grade detail page)
+RangeKeeperDebug.showDB()         → Show all data in IndexedDB
+RangeKeeperDebug.clearDB()        → Clear all local data
+RangeKeeperDebug.testBackend()    → Test backend connection
+─────────────────────────────────────────\`);
+    },
+    page: function() {
+      console.log('[RangeKeeper] Sending page detection request...');
+      window.postMessage({ type: 'RK_PAGE' }, '*');
+    },
+    run: function() {
+      console.log('[RangeKeeper] Triggering scraper...');
+      window.postMessage({ type: 'RK_RUN' }, '*');
+    },
+    grades: function() {
+      console.log('[RangeKeeper] Testing grades scraper...');
+      window.postMessage({ type: 'RK_GRADES' }, '*');
+    },
+    activity: function() {
+      console.log('[RangeKeeper] Testing activity stream scraper...');
+      window.postMessage({ type: 'RK_ACTIVITY' }, '*');
+    },
+    messages: function() {
+      console.log('[RangeKeeper] Testing messages scraper...');
+      window.postMessage({ type: 'RK_MESSAGES' }, '*');
+    },
+    thread: function() {
+      console.log('[RangeKeeper] Testing message thread scraper...');
+      window.postMessage({ type: 'RK_THREAD' }, '*');
+    },
+    feedback: function() {
+      console.log('[RangeKeeper] Testing feedback scraper...');
+      window.postMessage({ type: 'RK_FEEDBACK' }, '*');
+    },
+    showDB: function() {
+      console.log('[RangeKeeper] Fetching IndexedDB data...');
+      window.postMessage({ type: 'RK_SHOWDB' }, '*');
+    },
+    clearDB: function() {
+      console.log('[RangeKeeper] Clearing IndexedDB...');
+      window.postMessage({ type: 'RK_CLEARDB' }, '*');
+    },
+    testBackend: function() {
+      console.log('[RangeKeeper] Testing backend connection...');
+      window.postMessage({ type: 'RK_BACKEND' }, '*');
+    }
+  };
+  console.log('[RangeKeeper] 🎯 Debug console loaded! Type: RangeKeeperDebug.help()');
+})();
+  `;
+  
+  // Inject into document head before any other scripts run
+  if (document.head) {
+    document.head.insertBefore(injectScript, document.head.firstChild);
+  } else {
+    document.documentElement.insertBefore(injectScript, document.documentElement.firstChild);
+  }
+  
+  console.log('[RangeKeeper] ✅ Injected debug console into page world');
+} catch (err) {
+  console.error('[RangeKeeper] Error injecting debug console:', err.message);
+}
+
+// Listen for messages from page world debug console
+window.addEventListener('message', async (event) => {
+  // Only accept messages from our own window
+  if (event.source !== window) return;
+  
+  const { type } = event.data;
+  
+  if (type === 'RK_PAGE') {
+    const p = detectPage();
+    console.log(`[RangeKeeper] Current page: ${p}`);
+  } else if (type === 'RK_RUN') {
+    await runScraper();
+    console.log('[RangeKeeper] Scraper finished');
+  } else if (type === 'RK_GRADES') {
+    if (typeof scrapeGradesFromGradesPage === 'function') {
+      const result = scrapeGradesFromGradesPage();
+      console.log('[RangeKeeper] Grades found:', result.length, result);
+    } else {
+      console.error('[RangeKeeper] Grades scraper not loaded');
+    }
+  } else if (type === 'RK_ACTIVITY') {
+    if (typeof scrapeGradesFromActivity === 'function') {
+      const result = scrapeGradesFromActivity();
+      console.log('[RangeKeeper] Activity grades found:', result.length, result);
+    } else {
+      console.error('[RangeKeeper] Activity scraper not loaded');
+    }
+  } else if (type === 'RK_MESSAGES') {
+    if (typeof scrapeMessages === 'function') {
+      const result = scrapeMessages();
+      console.log('[RangeKeeper] Message threads found:', result.length, result);
+    } else {
+      console.error('[RangeKeeper] Messages scraper not loaded');
+    }
+  } else if (type === 'RK_THREAD') {
+    if (typeof scrapeMessageThread === 'function') {
+      const result = scrapeMessageThread();
+      console.log('[RangeKeeper] Messages in thread:', result.length, result);
+    } else {
+      console.error('[RangeKeeper] Thread scraper not loaded');
+    }
+  } else if (type === 'RK_FEEDBACK') {
+    if (typeof scrapeFeedback === 'function') {
+      const result = scrapeFeedback();
+      console.log('[RangeKeeper] Feedback:', result);
+    } else {
+      console.error('[RangeKeeper] Feedback scraper not loaded');
+    }
+  } else if (type === 'RK_SHOWDB') {
+    const stores = ['courses', 'assignments', 'grades', 'messages', 'feedback'];
+    const result = {};
+    for (const store of stores) {
+      result[store] = await getAllFromDB(store);
+    }
+    console.table(result.courses.map(c => ({ id: c.id, name: c.name })));
+    console.log('[RangeKeeper] Database contents:', result);
+  } else if (type === 'RK_CLEARDB') {
+    const db = await openDB();
+    const stores = ['courses', 'assignments', 'grades', 'messages', 'feedback'];
+    for (const store of stores) {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).clear();
+    }
+    console.log('[RangeKeeper] IndexedDB cleared');
+  } else if (type === 'RK_BACKEND') {
+    try {
+      const r = await fetch('http://localhost:3000/health');
+      const data = await r.json();
+      console.log('[RangeKeeper] ✅ Backend healthy:', data);
+    } catch (e) {
+      console.error('[RangeKeeper] ❌ Backend unreachable:', e.message);
+    }
+  }
+}, false);
