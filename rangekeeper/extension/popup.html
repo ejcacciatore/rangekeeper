@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RangeKeeper</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 RangeKeeper</h1>
+      <p class="subtitle">Your academic success companion</p>
+    </header>
+
+    <!-- Stats Row -->
+    <section class="summary">
+      <div class="stat">
+        <span class="stat-value" id="courses-count">-</span>
+        <span class="stat-label">Courses</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="assignments-count">-</span>
+        <span class="stat-label">Tasks</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="grades-count">-</span>
+        <span class="stat-label">Grades</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="messages-count">-</span>
+        <span class="stat-label">Messages</span>
+      </div>
+    </section>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="assignments">📅 Tasks</button>
+      <button class="tab" data-tab="grades">📊 Grades</button>
+      <button class="tab" data-tab="messages">💬 Messages</button>
+      <button class="tab" data-tab="courses">📚 Courses</button>
+    </nav>
+
+    <!-- Assignments Tab -->
+    <section class="tab-content active" id="tab-assignments">
+      <div id="assignments-list" class="item-list">
+        <p class="empty-state">No assignments found. Visit Blackboard to sync.</p>
+      </div>
+    </section>
+
+    <!-- Grades Tab -->
+    <section class="tab-content" id="tab-grades">
+      <div id="grades-list" class="item-list">
+        <p class="empty-state">No grades found. Visit your Blackboard grades page to sync.</p>
+      </div>
+    </section>
+
+    <!-- Messages Tab -->
+    <section class="tab-content" id="tab-messages">
+      <div id="messages-list" class="item-list">
+        <p class="empty-state">No messages found. Visit Blackboard messages to sync.</p>
+      </div>
+    </section>
+
+    <!-- Courses Tab -->
+    <section class="tab-content" id="tab-courses">
+      <div id="courses-list" class="item-list">
+        <p class="empty-state">No courses found. Visit Blackboard to sync.</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <button id="sync-btn" class="btn-primary">🔄 Sync Now</button>
+      <div class="debug-btns">
+        <button class="btn-debug" data-cmd="DEBUG_ACTIVITY">Activity</button>
+        <button class="btn-debug" data-cmd="DEBUG_GRADES">Grades</button>
+        <button class="btn-debug" data-cmd="DEBUG_MESSAGES">Messages</button>
+        <button class="btn-debug" data-cmd="DEBUG_THREAD">Thread</button>
+      </div>
+      <p class="last-sync">Last synced: <span id="last-sync-time">Never</span></p>
+    </footer>
+  </div>
+
+  <script src="scripts/popup.js"></script>
+</body>
+</html>

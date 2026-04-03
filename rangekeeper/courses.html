@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RangeKeeper — Courses</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+        
+        .nav {
+            background: #9E1B32;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .course-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .course-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .course-header {
+            padding: 1.5rem;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .course-code {
+            font-size: 1.3rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .course-instructor {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .course-body {
+            padding: 1.5rem;
+        }
+        
+        .course-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .course-stat {
+            text-align: center;
+        }
+        
+        .course-stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #9E1B32;
+        }
+        
+        .course-stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .course-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #9E1B32;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #7a1526;
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e5e5;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .courses-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <h1>🎯 RangeKeeper</h1>
+        <div class="nav-links">
+            <a href="index.html">Today</a>
+            <a href="courses.html">Courses</a>
+            <a href="assignments.html">Assignments</a>
+            <a href="grades.html">Grades</a>
+            <a href="calendar.html">Calendar</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1 class="page-title">📚 Your Courses</h1>
+        <p class="page-subtitle">Spring 2026 — University of Alabama</p>
+        
+        <div class="courses-grid" id="courses-grid"></div>
+    </div>
+    
+    <script src="assets/js/data.js"></script>
+    <script>
+        const { loadData, getCourseColor } = window.RangeKeeperData;
+        
+        async function init() {
+            const data = await loadData();
+            renderCourses(data.courses);
+        }
+        
+        function renderCourses(courses) {
+            const grid = document.getElementById('courses-grid');
+            
+            grid.innerHTML = courses.map(course => {
+                const color = getCourseColor(course.id);
+                const blackboardUrl = course.blackboard_url || 
+                    `https://ualearn.blackboard.com/ultra/courses/${course.id}/outline`;
+                
+                // Parse course code
+                const codeMatch = course.name.match(/\d+-([A-Z]+-\d+-\d+)/);
+                const courseCode = codeMatch ? codeMatch[1] : course.name;
+                
+                // Parse title from code
+                const parts = courseCode.split('-');
+                let title = 'Course';
+                if (parts[0] === 'EN') title = 'English Composition';
+                else if (parts[0] === 'ENGR') title = 'Introduction to Engineering';
+                else if (parts[0] === 'MATH') title = 'Calculus I';
+                else if (parts[0] === 'REL') title = 'Introduction to Religion';
+                else if (parts[0] === 'UA') title = 'University Success';
+                
+                return `
+                    <div class="course-card">
+                        <div class="course-header" style="background: ${color};">
+                            <div class="course-code">${courseCode}</div>
+                            <div class="course-instructor">👨‍🏫 ${course.instructor_name}</div>
+                        </div>
+                        <div class="course-body">
+                            <div class="course-stats">
+                                <div class="course-stat">
+                                    <div class="course-stat-value">${course.pending_count || 0}</div>
+                                    <div class="course-stat-label">Pending</div>
+                                </div>
+                                <div class="course-stat">
+                                    <div class="course-stat-value">${course.completed_count || 0}</div>
+                                    <div class="course-stat-label">Completed</div>
+                                </div>
+                            </div>
+                            <div class="course-actions">
+                                <a href="${blackboardUrl}" target="_blank" class="btn btn-primary">
+                                    Open in Blackboard →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# *
+User-agent: *
+Allow: /
+
+# Google bots
+User-agent: Googlebot
+Allow: /
+
+# Bing bots
+User-agent: Bingbot
+Allow: /
+
+# Sitemap
+Sitemap: https://sapinover-site.vercel.app/sitemap.xml
+
+# Disallow (if any)
+# User-agent: *
+# Disallow: /api/
+# Disallow: /admin/
