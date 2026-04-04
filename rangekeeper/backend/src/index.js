@@ -6,6 +6,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const db = require('./database');
@@ -90,6 +91,15 @@ app.post('/api/sync', async (req, res) => {
            fb.submissionDate, fb.gradedDate, fb.scrapedAt || Date.now()]
         ); } catch(e) { await ensureGradesTables(); }
       }
+    }
+
+    // Also auto-save to latest.json for the static site generator
+    try {
+      const dataPath = path.join(__dirname, '../../data/latest.json');
+      fs.writeFileSync(dataPath, JSON.stringify(req.body, null, 2));
+      console.log('[API] Auto-saved payload to data/latest.json');
+    } catch (fsErr) {
+      console.error('[API] Failed to text sync directly to latest.json:', fsErr);
     }
 
     // Check for new grades/messages → Discord notifications
@@ -220,6 +230,50 @@ app.get('/api/summary', async (req, res) => {
       timestamp: Date.now()
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/export/json
+ * Reconstructs a full JSON payload mirroring the Chrome Extension format
+ * for use by the static site generator and GitHub Actions.
+ */
+app.get('/api/export/json', async (req, res) => {
+  try {
+    const rawCourses = await db.getCourses();
+    const rawAssignments = await db.all(`SELECT * FROM assignments`) || [];
+    const rawGrades = await db.all(`SELECT * FROM grades`) || [];
+    const rawMessages = await db.all(`SELECT * FROM messages`) || [];
+
+    const formatCourse = (c) => ({
+      id: c.lms_course_id || c.id,
+      code: c.name.split(' ')[0], // crude approximation
+      name: c.name,
+      fullName: c.name,
+      scrapedAt: new Date(c.updated_at).getTime()
+    });
+
+    const formatAssignment = (a) => ({
+      id: a.lms_assignment_id || a.id,
+      courseId: a.course_id,
+      title: a.title,
+      due_date: a.due_date ? new Date(a.due_date).getTime() : null,
+      submitted: a.is_submitted ? 1 : 0,
+      status: a.is_submitted ? 'submitted' : (a.due_date && new Date(a.due_date) < new Date() ? 'overdue' : 'pending'),
+      scrapedAt: new Date(a.updated_at).getTime()
+    });
+
+    res.json({
+      courses: rawCourses.map(formatCourse),
+      assignments: rawAssignments.map(formatAssignment),
+      grades: rawGrades,
+      messages: rawMessages,
+      lastScraped: Date.now(),
+      exportedAt: Date.now()
+    });
+  } catch (err) {
+    console.error('[API] JSON Export Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
