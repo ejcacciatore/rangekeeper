@@ -1,6 +1,12 @@
 node_modules/
 .env
+.env.local
 .DS_Store
 dist/
 build/
 .openclaw/
+.next/
+*.db
+*.db-journal
+*.log
+
