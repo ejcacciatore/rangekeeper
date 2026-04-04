@@ -28,16 +28,20 @@ function scrapeMessages() {
   const currentSem = allSemCodes.length > 0 ? [...new Set(allSemCodes)].sort().reverse()[0] : null;
   console.log('[RangeKeeper] Current semester:', currentSem);
 
-  // Get all elements and find ones with the ID: pattern
-  const allEls = [...document.querySelectorAll('main *')];
-  const rowCandidates = allEls.filter(el => {
-    const text = el.textContent || '';
-    const rect = el.getBoundingClientRect();
-    return /ID:\s*\d{4,6}\.\d{6}/.test(text)
-      && /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text)
-      && rect.height > 20 && rect.height < 200
-      && rect.width > 200;
-  });
+  // Get all elements and find ones with the ID: pattern or standard Blackboard data-test-id
+  const rowCandidates = [...document.querySelectorAll('[data-test-id="course-messages-list-row"], [class*="message-row"]')];
+  
+  if (rowCandidates.length === 0) {
+    const allEls = [...document.querySelectorAll('main *')];
+    rowCandidates.push(...allEls.filter(el => {
+      const text = el.textContent || '';
+      const rect = el.getBoundingClientRect();
+      return /ID:\s*\d{4,6}\.\d{6}/.test(text)
+        && /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text)
+        && rect.height > 20 && rect.height < 200
+        && rect.width > 200;
+    }));
+  }
 
   const deduped = deduplicateElements(rowCandidates);
   console.log(`[RangeKeeper] Found ${deduped.length} message rows`);
@@ -61,14 +65,21 @@ function scrapeMessages() {
     const idMatch = text.match(/ID:\s*(\d{4,6}\.\d{6})/);
     const courseNum = idMatch ? idMatch[1] : null;
 
-    // Unread badge — small element with just digits
+    // Unread badge — small element with just digits or standard unread attribute
+    const unreadEl = row.querySelector('[data-test-id="unread-count"]') || 
+                     row.querySelector('.unread-indicator');
+    
     let unreadCount = 0;
-    for (const child of row.querySelectorAll('*')) {
-      const ct = child.textContent.trim();
-      const rect = child.getBoundingClientRect();
-      if (/^\d{1,3}$/.test(ct) && rect.width > 0 && rect.width < 60 && rect.height < 60) {
-        unreadCount = parseInt(ct);
-        break;
+    if (unreadEl) {
+      unreadCount = parseInt(unreadEl.textContent.trim()) || 1;
+    } else {
+      for (const child of row.querySelectorAll('*')) {
+        const ct = child.textContent.trim();
+        const rect = child.getBoundingClientRect();
+        if (/^\d{1,3}$/.test(ct) && rect.width > 0 && rect.width < 60 && rect.height < 60) {
+          unreadCount = parseInt(ct);
+          break;
+        }
       }
     }
 

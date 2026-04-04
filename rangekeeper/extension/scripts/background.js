@@ -132,6 +132,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }).catch(err => sendResponse({ error: err.message }));
       return true;
 
+    case 'SCRAPE_AUDIT':
+      handleAuditScrape()
+        .then(data => sendResponse({ status: 'success', data }))
+        .catch(err => sendResponse({ status: 'error', error: err.message }));
+      return true;
+
     case 'GET_STATS':
       Promise.all([
         getCount('courses'),
@@ -145,6 +151,88 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
   }
 });
+
+// ============================================================================
+// AUDIT ORCHESTRATION
+// ============================================================================
+
+async function handleAuditScrape() {
+  console.log('[Audit] 🎯 Starting Parallel Grade Audit...');
+  
+  // 1. Get Course List (Dynamic Discovery)
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab || !activeTab.url.includes('blackboard.com')) {
+    throw new Error('Please open Blackboard Courses page first.');
+  }
+
+  const discovery = await chrome.tabs.sendMessage(activeTab.id, { type: 'SCRAPE_NOW' });
+  const courses = await getAllFromStore('courses');
+  
+  if (courses.length === 0) {
+    throw new Error('No Spring 2026 courses discovered. Make sure you are on the Courses page.');
+  }
+
+  // 2. Open Gradebook Tabs
+  const auditResults = {
+    timestamp: Date.now(),
+    courses: {}
+  };
+
+  const scrapePromises = courses.map(async (course) => {
+    console.log(`[Audit] Opening gradebook for: ${course.code} (${course.id})`);
+    
+    // Create tab
+    const tab = await chrome.tabs.create({ 
+      url: `https://ualearn.blackboard.com/ultra/courses/${course.id}/grades`,
+      active: false 
+    });
+
+    try {
+      // Wait for load (Spec Step 2: 8s timeout)
+      await waitForTabComplete(tab.id, 8000);
+      
+      // Trigger Scrape
+      const result = await chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_NOW' });
+      
+      // Special: Check if MATH-125 needs WebAssign LTI
+      if (course.code.includes('MATH-125') && result.page === 'course-grades') {
+          console.log('[Audit] MATH-125 detected, checking for WebAssign LTI...');
+          // Future: trigger LTI launch here
+      }
+
+      auditResults.courses[course.code] = result;
+      return result;
+
+    } finally {
+      // Close tab
+      chrome.tabs.remove(tab.id);
+    }
+  });
+
+  await Promise.allSettled(scrapePromises);
+  console.log('[Audit] ✅ Parallel scrape complete');
+  
+  // 3. Sync Audit Results to Backend
+  await syncWithBackend({ auditData: auditResults });
+  
+  return auditResults;
+}
+
+function waitForTabComplete(tabId, timeout) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Tab load timeout')), timeout);
+    
+    const listener = (id, info) => {
+      if (id === tabId && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        clearTimeout(timer);
+        resolve();
+      }
+    };
+    
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+}
 
 // ============================================================================
 // DATA HANDLING

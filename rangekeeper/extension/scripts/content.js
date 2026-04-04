@@ -108,68 +108,52 @@ function detectPage() {
 // ============================================================================
 
 function scrapeCourses() {
-  console.log('[RangeKeeper] Scraping courses...');
+  console.log('[RangeKeeper] Dynamic Course Discovery (202610)...');
   const courses = [];
+  const currentTerm = '202610'; // Spring 2026
 
-  const courseItems = document.querySelectorAll('li[class*="MultiListroot"]');
-  console.log(`[RangeKeeper] Found ${courseItems.length} course items via MultiListroot`);
-
-  courseItems.forEach((item, index) => {
+  // Course cards render as links in Blackboard Ultra
+  // href format: /ultra/courses/_397881_1/outline → ID = _397881_1
+  // Section code in card text: "202610-ENGR-101-006"
+  const links = [...document.querySelectorAll('a[href*="/ultra/courses/"]')];
+  
+  links.forEach(link => {
     try {
-      const link = item.querySelector('a[href*="/ultra/course"]');
-      if (!link) return;
+      const href = link.getAttribute('href');
+      const text = (link.textContent || '').trim();
+      
+      // Look for the Spring 2026 term prefix
+      if (!text.includes(currentTerm)) return;
+      
+      // Extract BB Internal ID (_XXXXX_1)
+      const idMatch = href.match(/\/courses\/(_\d+_\d)/);
+      const bbId = idMatch ? idMatch[1] : null;
+      if (!bbId) return;
 
-      const url = link.getAttribute('href');
-      const courseIdMatch = url.match(/\/course\/([^\/\?]+)/);
-      const courseId = courseIdMatch ? courseIdMatch[1] : null;
-      if (!courseId) return;
+      // Extract Section Code (e.g. 202610-REL-100-919)
+      const codeMatch = text.match(/(\d{6}-[A-Z]{2,5}-\d{2,4}-\d{2,4})/);
+      const courseCode = codeMatch ? codeMatch[1] : null;
+      if (!courseCode) return;
 
-      const nameElements = item.querySelectorAll('p[class*="Multypography"]');
-      let courseCode = null;
-      let courseName = null;
-
-      if (nameElements.length >= 2) {
-        courseCode = nameElements[0].textContent.trim();
-        courseName = nameElements[1].textContent.trim();
-      } else if (nameElements.length === 1) {
-        courseCode = nameElements[0].textContent.trim();
-        courseName = courseCode;
-      } else {
-        courseName = item.textContent.trim().substring(0, 100);
+      // Deduplicate by courseCode
+      if (!courses.some(c => c.code === courseCode)) {
+        courses.push({
+          id: bbId,
+          code: courseCode,
+          name: text.split('\n')[0].trim(), // Crude name extract
+          fullName: text,
+          term: currentTerm,
+          url: `https://ualearn.blackboard.com/ultra/courses/${bbId}/outline`,
+          scrapedAt: Date.now()
+        });
+        console.log(`[RangeKeeper] Discovered: ${courseCode} (${bbId})`);
       }
-
-      courses.push({
-        id: courseId,
-        code: courseCode,
-        name: courseName,
-        fullName: courseCode ? `${courseCode} — ${courseName}` : courseName,
-        url: url.startsWith('http') ? url : `https://ualearn.blackboard.com${url}`,
-        scrapedAt: Date.now()
-      });
     } catch (err) {
-      console.error('[RangeKeeper] Error scraping course:', err);
+      console.error('[RangeKeeper] Error in discovery:', err);
     }
   });
 
-  // Fallback: try other selectors
-  if (courses.length === 0) {
-    const links = document.querySelectorAll('a[href*="/ultra/course"]');
-    links.forEach((link, idx) => {
-      const url = link.getAttribute('href');
-      const name = link.textContent.trim();
-      if (name.length > 3) {
-        courses.push({
-          id: `course_${idx}`,
-          name: name,
-          fullName: name,
-          url: url.startsWith('http') ? url : `https://ualearn.blackboard.com${url}`,
-          scrapedAt: Date.now()
-        });
-      }
-    });
-  }
-
-  console.log(`[RangeKeeper] Scraped ${courses.length} courses`);
+  console.log(`[RangeKeeper] Discovery complete: ${courses.length} courses for ${currentTerm}`);
   return courses;
 }
 

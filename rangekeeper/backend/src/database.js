@@ -66,15 +66,36 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS grades (
       id TEXT PRIMARY KEY,
       course_id TEXT,
-      assignment_id TEXT,
-      score REAL,
-      max_score REAL,
+      assignment_name TEXT,
+      score TEXT,
+      possible TEXT,
       percentage REAL,
-      grade_posted_date INTEGER,
-      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
-      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
-      FOREIGN KEY (course_id) REFERENCES courses(id),
-      FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+      letter_grade TEXT,
+      status TEXT,
+      feedback TEXT,
+      rubric_scores TEXT,
+      source TEXT,
+      scraped_at INTEGER,
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+    )
+  `);
+
+  // Messages
+  db.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      type TEXT,
+      course_id TEXT,
+      sender TEXT,
+      subject TEXT,
+      preview TEXT,
+      body TEXT,
+      date TEXT,
+      is_unread INTEGER DEFAULT 0,
+      unread_count INTEGER DEFAULT 0,
+      source TEXT,
+      scraped_at INTEGER,
+      updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
     )
   `);
 

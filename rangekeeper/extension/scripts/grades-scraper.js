@@ -125,20 +125,21 @@ function scrapeGradesFromGradesPage() {
   const isOverview = /\/ultra\/grades\b/.test(url) && !/\/courses\//.test(url);
 
   if (isOverview) {
-    // Find course cards — each has internal ID + course code + grade badge
-    // Structure: div containing "XXXXX.202610\n202610-COURSE-CODE" + colored grade pill
-
-    const allEls = [...document.querySelectorAll('main *')];
-
-    // Find containers that have both internal ID pattern and course code pattern
-    const cards = allEls.filter(el => {
-      const text = el.textContent || '';
-      const rect = el.getBoundingClientRect();
-      return /\d{4,6}\.\d{6}/.test(text)
-        && /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text)
-        && rect.height > 80
-        && rect.width > 400;
-    });
+    // Find course cards using data-test-id if available, otherwise fallback to text detection
+    let cards = [...document.querySelectorAll('[data-test-id="course-list-item"], [class*="course-card"]')];
+    
+    if (cards.length === 0) {
+      const allEls = [...document.querySelectorAll('main *')];
+      // Find containers that have both internal ID pattern and course code pattern
+      cards = allEls.filter(el => {
+        const text = el.textContent || '';
+        const rect = el.getBoundingClientRect();
+        return /\d{4,6}\.\d{6}/.test(text)
+          && /\d{6}-[A-Z]{2,5}-\d{2,4}/.test(text)
+          && rect.height > 80
+          && rect.width > 400;
+      });
+    }
 
     const deduped = deduplicateElements(cards);
     console.log(`[RangeKeeper] Found ${deduped.length} course grade cards`);
@@ -235,7 +236,10 @@ function scrapeGradesFromGradesPage() {
   console.log(`[RangeKeeper] Course ref: ${courseRef} (from: ${courseCodeFromPage ? 'page' : 'url'}`);
 
   // Overall grade from top-right badge ("A-" in green pill)
-  const overallEl = document.querySelector('[class*="current-grade"], [class*="grade-badge"], .current-grade') ||
+  // Try data-test-id first, then aria-label, then fallback to visual matching
+  const overallEl = document.querySelector('[data-test-id="grade-item-value"]') ||
+    document.querySelector('[aria-label*="Overall grade"]') ||
+    document.querySelector('[class*="current-grade"], [class*="grade-badge"], .current-grade') ||
     [...document.querySelectorAll('*')].find(el => {
       const text = el.textContent.trim();
       return /^[A-F][+-]?$/.test(text) && el.getBoundingClientRect().width < 80;
@@ -243,10 +247,12 @@ function scrapeGradesFromGradesPage() {
   const overallGrade = overallEl ? overallEl.textContent.trim() : null;
 
   // Find grade rows — table rows or divs with score pill pattern "NN / NN"
-  const tableRows = [...document.querySelectorAll('table tbody tr, [role="row"]')];
+  const tableRows = [...document.querySelectorAll('tr[data-test-id="grade-item-row"], table tbody tr, [role="row"]')];
   const scoreDivs = [...document.querySelectorAll('main *')].filter(el => {
     const text = el.textContent || '';
     const rect = el.getBoundingClientRect();
+    // Use data-test-id if available
+    if (el.getAttribute('data-test-id') === 'grade-item-value') return true;
     return /\d+\s*\/\s*\d+/.test(text) && rect.height > 20 && rect.height < 150 && rect.width > 300;
   });
 

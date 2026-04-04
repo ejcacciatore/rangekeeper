@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RangeKeeper — Grade Audit 4/4/2026</title>
+    <style>
+        :root {
+            --ua-crimson: #9E1B32;
+            --ua-gray: #828A8F;
+            --success: #047857;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --info: #2563eb;
+            --bg: #F8FAFC;
+        }
+
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 2rem; color: #1e293b; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 2rem; border-left: 8px solid var(--ua-crimson); }
+        h1 { margin: 0; color: var(--ua-crimson); font-size: 1.8rem; }
+        .metadata { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; font-size: 0.9rem; color: var(--ua-gray); }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .summary-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 4px solid var(--ua-gray); }
+        .summary-card .course { font-weight: bold; font-size: 0.85rem; margin-bottom: 0.5rem; }
+        .summary-card .grade { font-size: 2rem; font-weight: 800; color: #1e293b; }
+        .summary-card .status { font-size: 0.75rem; margin-top: 0.5rem; }
+
+        .section { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 3rem; overflow: hidden; }
+        .section-header { background: #f1f5f9; padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { margin: 0; font-size: 1.1rem; color: #334155; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: #f8fafc; padding: 0.75rem 1.5rem; font-size: 0.75rem; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 0.75rem 1.5rem; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        
+        .pct-A { color: var(--success); font-weight: bold; }
+        .pct-B { color: #059669; }
+        .pct-C { color: var(--warning); }
+        .pct-F { color: var(--danger); font-weight: bold; }
+        .pct-zero { color: white; background: var(--danger); padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+        .status-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-graded { background: #dcfce7; color: #166534; }
+        .status-pastdue { background: #fee2e2; color: #991b1b; }
+        .status-unopened { background: #f1f5f9; color: #475569; }
+
+        .crosscheck-panel { background: #fffbeb; padding: 1.5rem; border-top: 2px dashed #fcd34d; }
+        .crosscheck-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 1rem; color: #92400e; display: flex; align-items: center; gap: 0.5rem; }
+        .check-item { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.85rem; }
+        .check-icon { font-size: 1.1rem; }
+        .check-details { flex: 1; }
+        .check-claim { font-weight: 600; }
+        .check-actual { color: #475569; font-style: italic; }
+
+        .tag { font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; margin-left: 0.5rem; vertical-align: middle; }
+        .tag-late { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+        .tag-webassign { background: #e0f2fe; color: #0369a1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1>RangeKeeper — High-Fidelity Grade Audit</h1>
+                    <div class="metadata">
+                        <div>Student: <strong>Massimo McRae</strong></div>
+                        <div>Term: <strong>Spring 2026</strong></div>
+                        <div>Generated: <strong>[DATE]</strong></div>
+                    </div>
+                </div>
+                <div style="text-align: right; background: #D1F2EB; padding: 0.5rem 1rem; border-radius: 8px; color: #047857; font-weight: bold; font-size: 0.8rem;">
+                    ALL SYSTEMS NOMINAL
+                </div>
+            </div>
+        </header>
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid" id="summary-container">
+            <!-- Inject summary cards here -->
+        </div>
+
+        <!-- COURSE SECTIONS -->
+        <div id="sections-container">
+            <!-- Inject course tables here -->
+        </div>
+
+        <footer style="text-align: center; margin-top: 4rem; padding-bottom: 2rem; color: var(--ua-gray); font-size: 0.8rem; border-top: 1px solid #e2e8f0; padding-top: 2rem;">
+            RangeKeeper v0.2.0 • High-Fidelity Audit Module • 4/4/2026, 12:20:40 AM
+        </footer>
+    </div>
+
+    <!-- DATA INJECTION (BAKED IN) -->
+    <script id="audit-data" type="application/json">
+        {"courses":{"en103":{"code":"202610-EN-103-025","title":"EN 103 — English Composition","section":"202610-EN-103-025","instructor":"O'Rourke","bbId":"_413210_1","overallGrade":"B","gradeSource":"blackboard","gradebookItems":[{"name":"Annotated Bibliography","dueDate":"3/27/26","status":"Graded","earnedPts":0,"maxPts":100,"pct":0,"isLate":true},{"name":"Research Paper","dueDate":"4/10/26","status":"Upcoming","earnedPts":null,"maxPts":null,"pct":null,"isLate":false}],"advisorChecks":[{"flag":"DIFF","claim":"Grade pending — Annotated Bib update","actual":"0/100","note":"BB shows 0/100 (Late). Not updated."}]},"engr101":{"code":"202610-ENGR-101-006","title":"ENGR 101 — Engineering Orientation","section":"202610-ENGR-101-006","instructor":"S. Smith","bbId":"_397881_1","overallGrade":"B-","gradeSource":"blackboard","gradebookItems":[{"name":"Attendance Feb 5","dueDate":"2/5/26","status":"Graded","earnedPts":0,"maxPts":1,"pct":0,"isLate":false},{"name":"Attendance Feb 26","dueDate":"2/26/26","status":"Graded","earnedPts":0,"maxPts":1,"pct":0,"isLate":false},{"name":"Attendance Mar 12","dueDate":"3/12/26","status":"Graded","earnedPts":0,"maxPts":1,"pct":0,"isLate":false},{"name":"Attendance Mar 26","dueDate":"3/26/26","status":"Graded","earnedPts":0,"maxPts":1,"pct":0,"isLate":false}],"advisorChecks":[{"flag":"DIFF","claim":"B+ claim vs BB","actual":"79.7% (B-)","note":"Actual grade deviates from advisor claim."}]}}}
+    </script>
+
+    <script>
+        // CLIENT-SIDE RENDERER (Runs on open, but uses baked-in data)
+        const rawData = JSON.parse(document.getElementById('audit-data').textContent);
+        
+        function render() {
+            const summaryCont = document.getElementById('summary-container');
+            const sectionCont = document.getElementById('sections-container');
+            
+            Object.entries(rawData.courses).forEach(([key, course]) => {
+                // Summary Card
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <div class="course">${course.code}</div>
+                    <div class="grade">${course.overallGrade || '—'}</div>
+                    <div class="status">${course.auditSummary || 'Match'}</div>
+                `;
+                summaryCont.appendChild(card);
+
+                // Section
+                const section = document.createElement('div');
+                section.className = 'section';
+                section.innerHTML = `
+                    <div class="section-header">
+                        <h2>${course.title} <span class="tag tag-webassign">${course.gradeSource}</span></h2>
+                        <div style="font-size: 0.8rem; color: #64748b;">${course.section} • BB ID: ${course.bbId}</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th><th>Pct</th></tr>
+                        </thead>
+                        <tbody>
+                            ${course.gradebookItems.map(item => `
+                                <tr>
+                                    <td>${item.name} ${item.isLate ? '<span class="tag tag-late">LATE</span>' : ''}</td>
+                                    <td>${item.dueDate || '—'}</td>
+                                    <td><span class="status-badge status-${(item.status || 'pending').toLowerCase().replace(' ','')}">${item.status}</span></td>
+                                    <td>${item.earnedPts !== null ? `${item.earnedPts} / ${item.maxPts}` : '—'}</td>
+                                    <td class="${item.earnedPts === 0 ? 'pct-zero' : 'pct-A'}">${item.pct !== null ? `${item.pct}%` : '—'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="crosscheck-panel">
+                        <div class="crosscheck-title">🔍 ADVISOR CROSSCHECK</div>
+                        ${course.advisorChecks.map(check => `
+                            <div class="check-item">
+                                <span class="check-icon">${check.flag === 'MATCH' ? '✅' : (check.flag === 'DIFF' ? '❌' : 'ℹ️')}</span>
+                                <div class="check-details">
+                                    <div class="check-claim">${check.claim}</div>
+                                    <div class="check-actual">Actual: ${check.actual}</div>
+                                    <div style="font-size: 0.75rem; color: #92400e; margin-top: 0.2rem;">${check.note}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                sectionCont.appendChild(section);
+            });
+        }
+        
+        render();
+    </script>
+</body>
+</html>

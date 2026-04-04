@@ -7,100 +7,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-// ============================================================
-// ENUMS
-// ============================================================
-
-enum UserRole {
-  STUDENT
-  PARENT
-  COACH
-  ADMIN
-}
-
-enum LMSType {
-  CANVAS
-  BLACKBOARD
-  GOOGLE_CLASSROOM
-  MANUAL
-}
-
-enum AssignmentType {
-  ESSAY
-  READING
-  PROBLEM_SET
-  PROJECT
-  EXAM
-  QUIZ
-  DISCUSSION
-  LAB
-  PRESENTATION
-  OTHER
-}
-
-enum MicroTaskStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETE
-  SKIPPED
-  DEFERRED
-}
-
-enum TimeBlockType {
-  DEEP_WORK      // High cognitive load, needs full focus
-  LIGHT_WORK     // Lower cognitive load, can tolerate interruptions
-  BREAK          // Recovery time
-  TRANSITION     // Buffer between tasks (critical for ASD)
-  ADMIN          // Low-effort logistics (submitting, printing, etc.)
-  REVIEW         // Reviewing/checking completed work
-}
-
-enum NudgeLevel {
-  LEVEL_1   // Gentle reminder
-  LEVEL_2   // Specific action instruction
-  LEVEL_3   // Reframe + motivation
-  LEVEL_4   // Parent/coach alert triggered
-}
-
-enum NudgeStatus {
-  SCHEDULED
-  SENT
-  ACKNOWLEDGED
-  SNOOZED
-  CANCELLED
-}
-
-enum NudgeChannel {
-  SMS
-  PUSH
-  EMAIL
-  IN_APP
-}
-
-enum ParentPermission {
-  VIEW_PLAN        // See today's plan only
-  VIEW_PROGRESS    // See completion streaks and summaries
-  VIEW_ALERTS      // Receive non-completion alerts
-  FULL_DASHBOARD   // All of the above + upcoming deadlines
-}
-
-enum SyncStatus {
-  NEVER_SYNCED
-  SYNCING
-  SUCCESS
-  FAILED
-  PARTIAL
-}
-
-enum EnergyLevel {
-  LOW
-  MEDIUM
-  HIGH
-}
+// ENUMS removed for SQLite compatibility. Use String with @default instead.
 
 // ============================================================
 // USERS & AUTHENTICATION
@@ -113,7 +24,7 @@ model User {
   phone             String?         // For SMS notifications
   phoneVerified     Boolean         @default(false)
   name              String
-  role              UserRole        @default(STUDENT)
+  role              String          @default("STUDENT")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   deletedAt         DateTime?       // Soft delete
@@ -154,26 +65,26 @@ model StudentProfile {
 
   // Energy and cognitive preferences
   peakEnergyMorning     Boolean       @default(true)   // True = morning person
-  peakEnergyBlocks      String[]      @default(["09:00-11:00", "14:00-16:00"])
+  peakEnergyBlocks      String?      @default("09:00-11:00,14:00-16:00")
   maxDeepWorkMinutes    Int           @default(45)     // Max continuous focus block
   preferredBreakMinutes Int           @default(10)     // Break duration between blocks
   transitionBufferMin   Int           @default(5)      // Buffer between tasks
 
   // ASD/ADHD specific preferences
-  sensoryProfile        Json?         // { lowContrast: bool, reducedMotion: bool, fontSize: string }
+  sensoryProfile        String?         // JSON string: { lowContrast: bool, reducedMotion: bool, fontSize: string }
   taskInitiationSupport Boolean       @default(true)   // Send "just start" micro-prompts
   transitionWarnings    Boolean       @default(true)   // Warn 5 min before task switch
   predictableStructure  Boolean       @default(true)   // Same plan format daily
   celebrationStyle      String        @default("emoji") // emoji | minimal | verbose
 
   // Academic preferences
-  preferredWorkDays     String[]      @default(["Mon", "Tue", "Wed", "Thu", "Fri"])
+  preferredWorkDays     String?      @default("Mon,Tue,Wed,Thu,Fri")
   avoidLastMinute       Boolean       @default(true)   // Prefer to finish 1 day early
   bufferBeforeDue       Int           @default(24)     // Hours before due date to target completion
 
   // Onboarding
   onboardingCompleted   Boolean       @default(false)
-  lmsType               LMSType       @default(MANUAL)
+  lmsType               String        @default("MANUAL")
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -233,7 +144,7 @@ model LMSConnection {
   userId                String
   user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  lmsType               LMSType
+  lmsType               String
   schoolDomain          String        // e.g., "umich.instructure.com"
   lmsUserId             String?       // User ID within the LMS
   lmsUserName           String?
@@ -244,13 +155,13 @@ model LMSConnection {
   tokenExpiresAt        DateTime?
 
   // Sync state
-  syncStatus            SyncStatus    @default(NEVER_SYNCED)
+  syncStatus            String    @default("NEVER_SYNCED")
   lastSyncAt            DateTime?
   lastSyncError         String?
   syncFailureCount      Int           @default(0)
 
   // LMS-specific metadata
-  metadata              Json?         // School-specific config, API quirks
+  metadata              String?         // School-specific config, API quirks
 
   isActive              Boolean       @default(true)
   createdAt             DateTime      @default(now())
@@ -287,7 +198,7 @@ model CalendarConnection {
   classroomScope        Boolean       @default(false)
 
   // Sync state
-  syncStatus            SyncStatus    @default(NEVER_SYNCED)
+  syncStatus            String    @default("NEVER_SYNCED")
   lastCalendarSync      DateTime?
   calendarSyncError     String?
 
@@ -314,7 +225,7 @@ model Course {
 
   // LMS identifiers
   lmsCourseId           String?       // ID in the LMS
-  lmsType               LMSType       @default(MANUAL)
+  lmsType               String        @default("MANUAL")
 
   // Course info
   name                  String
@@ -339,6 +250,7 @@ model Course {
 
   // Relations
   assignments           Assignment[]
+  advisorChecks         AdvisorCheck[]
 
   @@unique([studentProfileId, lmsCourseId, lmsType])
   @@index([studentProfileId])
@@ -356,12 +268,12 @@ model Assignment {
 
   // LMS identifiers
   lmsAssignmentId       String?
-  lmsType               LMSType       @default(MANUAL)
+  lmsType               String        @default("MANUAL")
 
   // Assignment details
   title                 String
   description           String?       // Full assignment description from LMS
-  type                  AssignmentType @default(OTHER)
+  type                  String         @default("OTHER")
   dueDate               DateTime?
   availableFrom         DateTime?     // When assignment opens
 
@@ -387,9 +299,9 @@ model Assignment {
 
   // Metadata
   lmsUrl                String?       // Direct link to assignment in LMS
-  attachments           Json?         // Array of attachment metadata
-  rubric                Json?         // Rubric if provided by instructor
-  metadata              Json?         // LMS-specific extra fields
+  attachments           String?         // Array of attachment metadata as JSON
+  rubric                String?         // Rubric if provided by instructor as JSON
+  metadata              String?         // LMS-specific extra fields as JSON
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -403,6 +315,28 @@ model Assignment {
   @@index([dueDate])
   @@index([urgencyScore])
   @@map("assignments")
+}
+
+// ============================================================
+// ADVISOR CROSSCHECKS
+// ============================================================
+
+model AdvisorCheck {
+  id                    String        @id @default(cuid())
+  courseId              String
+  course                Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  claim                 String        // Advisor's claim (e.g. "B+ claim vs BB")
+  actual                String        // Actual value from BB (e.g. "79.7%")
+  match                 Boolean       // true if claim matches actual
+  flag                  String        // MATCH | DIFF | INFO | WARN
+  note                  String?       // Explanation for the flag
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([courseId])
+  @@map("advisor_checks")
 }
 
 // ============================================================
@@ -425,7 +359,7 @@ model MicroTask {
   actualMinutes         Int?            // Actual time spent (from timer or student input)
 
   // Classification
-  taskType              TimeBlockType   @default(DEEP_WORK)
+  taskType              String          @default("DEEP_WORK")
   requiresInternet      Boolean         @default(false)
   requiresPhysicalSpace String?         // "library", "lab", "quiet room"
   prerequisiteMicroTaskId String?       // Must complete this task first
@@ -433,7 +367,7 @@ model MicroTask {
   dependentTasks        MicroTask[]     @relation("MicroTaskPrereqs")
 
   // Status
-  status                MicroTaskStatus @default(PENDING)
+  status                String          @default("PENDING")
   startedAt             DateTime?
   completedAt           DateTime?
   deferredUntil         DateTime?
@@ -470,7 +404,7 @@ model DailyPlan {
   studentProfileId      String
   studentProfile        StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
-  planDate              DateTime      @db.Date  // The day this plan is for
+  planDate              DateTime      // The day this plan is for (stored as DateTime)
   generatedAt           DateTime      @default(now())
   promptVersion         String?       // Which AI prompt version was used
 
@@ -482,7 +416,7 @@ model DailyPlan {
 
   // Delivery status
   deliveredAt           DateTime?     // When morning plan was sent to student
-  deliveryChannel       NudgeChannel?
+  deliveryChannel       String?
 
   // Plan narrative (AI-generated summary)
   morningMessage        String?       // "Today you've got 3 things. Here's the plan."
@@ -521,7 +455,7 @@ model TimeBlock {
 
   // Block definition
   sequence              Int           // Order in the day
-  blockType             TimeBlockType
+  blockType             String
   title                 String        // e.g., "Read Chapter 4 — Psych 201"
   description           String?       // What to do in this block
   startInstruction      String?       // The very first action to take
@@ -569,14 +503,14 @@ model Nudge {
   timeBlock             TimeBlock?    @relation(fields: [timeBlockId], references: [id])
 
   // Nudge content
-  channel               NudgeChannel
-  level                 NudgeLevel    @default(LEVEL_1)
+  channel               String
+  level                 String    @default("LEVEL_1")
   message               String        // The actual message text
   promptVersion         String?       // Nudge prompt version
 
   // Scheduling
   scheduledFor          DateTime      // When to fire this nudge
-  status                NudgeStatus   @default(SCHEDULED)
+  status                String   @default("SCHEDULED")
 
   // Delivery
   sentAt                DateTime?
@@ -615,7 +549,7 @@ model CompletionLog {
 
   // What was completed
   title                 String        // Human-readable description of the win
-  taskType              TimeBlockType?
+  taskType              String?
   courseName            String?       // Denormalized for easy win display
 
   // Timing
@@ -655,7 +589,7 @@ model ParentLink {
   studentUser           User              @relation("StudentUser", fields: [studentUserId], references: [id], onDelete: Cascade)
 
   // Permission level
-  permissions           ParentPermission[]
+  permissions           String?             // Array of permissions stored as JSON in String
 
   // Link status
   isActive              Boolean           @default(true)
@@ -694,7 +628,7 @@ model JobLog {
   durationMs            Int?
   recordsProcessed      Int?
   errorMessage          String?
-  metadata              Json?
+  metadata              String?
   createdAt             DateTime      @default(now())
 
   @@index([jobType])
@@ -710,7 +644,7 @@ model AuditLog {
   resource              String?       // e.g., "ParentLink:abc123"
   ipAddress             String?
   userAgent             String?
-  metadata              Json?
+  metadata              String?
   createdAt             DateTime      @default(now())
 
   @@index([userId])
