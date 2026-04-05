@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Massimo McRae — Grade Audit, Spring 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    header {
+      background: #1a237e;
+      color: #fff;
+      padding: 24px 32px;
+    }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p { opacity: 0.75; font-size: 0.9rem; margin-top: 4px; }
+
+    .urgent-banner {
+      background: #b71c1c;
+      color: #fff;
+      padding: 20px 32px;
+      border-left: 8px solid #ff1744;
+    }
+    .urgent-banner h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .urgent-banner ul { margin-left: 24px; margin-top: 6px; }
+    .urgent-banner li { margin: 4px 0; }
+    .urgent-banner .action { margin-top: 10px; font-weight: 600; font-size: 0.95rem; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 4px; display: inline-block; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+    .cards { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 24px;
+      flex: 1;
+      min-width: 160px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+      text-align: center;
+    }
+    .card .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 6px; }
+    .card .value { font-size: 2rem; font-weight: 700; }
+    .card.red .value { color: #b71c1c; }
+    .card.orange .value { color: #e65100; }
+    .card.blue .value { color: #1565c0; }
+    .card.green .value { color: #2e7d32; }
+
+    section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.10); }
+    section h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; border-bottom: 2px solid #e8eaf6; padding-bottom: 10px; color: #1a237e; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #555; border-bottom: 2px solid #e0e0e0; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-red { background: #ffebee; color: #b71c1c; }
+    .badge-orange { background: #fff3e0; color: #e65100; }
+    .badge-yellow { background: #fffde7; color: #f57f17; }
+    .badge-green { background: #e8f5e9; color: #2e7d32; }
+    .badge-blue { background: #e3f2fd; color: #1565c0; }
+
+    .zero { color: #b71c1c; font-weight: 700; }
+    .warn { color: #e65100; font-weight: 600; }
+
+    .course-block { margin-bottom: 20px; }
+    .course-block h3 { font-size: 0.95rem; font-weight: 700; color: #333; margin-bottom: 8px; padding: 6px 10px; background: #f5f5f5; border-left: 4px solid #1a237e; }
+    .course-block.en103 h3 { border-left-color: #b71c1c; background: #fff5f5; }
+    .course-block.rel100 h3 { border-left-color: #e65100; }
+
+    .note-box {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: #555;
+      margin-bottom: 24px;
+    }
+    .note-box strong { color: #333; }
+
+    .action-list { list-style: none; }
+    .action-list li { padding: 8px 12px; border-left: 3px solid #1a237e; margin-bottom: 8px; background: #f5f7ff; }
+    .action-list li.urgent { border-left-color: #b71c1c; background: #fff5f5; }
+    .action-list li.warn { border-left-color: #e65100; background: #fff8f0; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    @media (max-width: 600px) {
+      .cards { flex-direction: column; }
+      header { padding: 18px 16px; }
+      .container { padding: 16px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Massimo McRae — Grade Audit</h1>
+  <p>Spring 2026 &nbsp;|&nbsp; Synced: April 5, 2026 (live Blackboard scrape, 15:59 UTC)</p>
+</header>
+
+<!-- ===== URGENT BANNER ===== -->
+<div class="urgent-banner">
+  <h2>⚠️ URGENT — EN-103: 14 Unread Messages from Prof. O'Rourke</h2>
+  <p>Three recorded grades in EN-103 are zeros or near-zero. Prof. O'Rourke has sent 14 unread messages that have NOT been read.</p>
+  <ul>
+    <li>Assignment 1: <strong>0 / 100</strong></li>
+    <li>Assignment 2: <strong>0 / 100</strong></li>
+    <li>Assignment 3: <strong>2 / 26</strong></li>
+  </ul>
+  <div class="action">→ Action required: Open EN-103 in Blackboard, read all messages from Prof. O'Rourke, and contact her immediately.</div>
+</div>
+
+<div class="container">
+
+  <!-- ===== SUMMARY CARDS ===== -->
+  <div class="cards">
+    <div class="card blue">
+      <div class="label">Spring 2026 Courses</div>
+      <div class="value">5</div>
+    </div>
+    <div class="card red">
+      <div class="label">Unread Messages</div>
+      <div class="value">23</div>
+    </div>
+    <div class="card red">
+      <div class="label">Zero Grades</div>
+      <div class="value">6</div>
+    </div>
+    <div class="card orange">
+      <div class="label">At-Risk Courses</div>
+      <div class="value">2</div>
+    </div>
+    <div class="card green">
+      <div class="label">Passing Courses</div>
+      <div class="value">3</div>
+    </div>
+  </div>
+
+  <!-- ===== COURSES TABLE ===== -->
+  <section>
+    <h2>Spring 2026 — Course Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Title</th>
+          <th>Est. Grade</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>EN-103</strong></td>
+          <td>English Composition</td>
+          <td><span class="zero">F (est.)</span></td>
+          <td><span class="badge badge-red">⚠️ CRITICAL</span></td>
+          <td>0/100, 0/100, 2/26 — 14 unread messages from Prof. O'Rourke</td>
+        </tr>
+        <tr>
+          <td><strong>REL-100</strong></td>
+          <td>Introduction to Religion</td>
+          <td><span class="warn">C+</span></td>
+          <td><span class="badge badge-orange">At Risk</span></td>
+          <td>3 zero grades pulling average down (Module 7 Quiz, 2 discussions)</td>
+        </tr>
+        <tr>
+          <td><strong>MATH-125</strong></td>
+          <td>Pre-Calculus</td>
+          <td>C+ (~79%)</td>
+          <td><span class="badge badge-yellow">Monitor</span></td>
+          <td>Individual grades not synced to local cache; estimate only</td>
+        </tr>
+        <tr>
+          <td><strong>ENGR-101</strong></td>
+          <td>Introduction to Engineering</td>
+          <td>B+</td>
+          <td><span class="badge badge-blue">Passing</span></td>
+          <td>All assignments 100%; 4 attendance absences flagged</td>
+        </tr>
+        <tr>
+          <td><strong>UA-101</strong></td>
+          <td>University Achievement</td>
+          <td>A (~94%)</td>
+          <td><span class="badge badge-green">Good</span></td>
+          <td>Most assignments 100%; Module 6 Quiz 8%, BMC Quiz 47%, Attendance 75%</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ===== GRADE DETAILS ===== -->
+  <section>
+    <h2>Grade Details — Per Course</h2>
+
+    <!-- EN-103 -->
+    <div class="course-block en103">
+      <h3>EN-103 — English Composition &nbsp; <span class="badge badge-red">CRITICAL</span></h3>
+      <table>
+        <thead>
+          <tr><th>Assignment</th><th>Score</th><th>Points</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Assignment 1</td>
+            <td><span class="zero">0</span></td>
+            <td>100</td>
+            <td><span class="badge badge-red">Zero</span></td>
+          </tr>
+          <tr>
+            <td>Assignment 2</td>
+            <td><span class="zero">0</span></td>
+            <td>100</td>
+            <td><span class="badge badge-red">Zero</span></td>
+          </tr>
+          <tr>
+            <td>Assignment 3</td>
+            <td><span class="warn">2</span></td>
+            <td>26</td>
+            <td><span class="badge badge-red">Near Zero (7.7%)</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px; font-size:0.85rem; color:#b71c1c;">
+        ⚠️ 14 unread messages from Prof. O'Rourke remain unread as of April 5, 2026. Message content was not captured (see Data Source Note below).
+      </p>
+    </div>
+
+    <!-- REL-100 -->
+    <div class="course-block rel100">
+      <h3>REL-100 — Introduction to Religion &nbsp; <span class="badge badge-orange">At Risk</span></h3>
+      <table>
+        <thead>
+          <tr><th>Assignment</th><th>Score</th><th>Points</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Module 3 Assignment</td>
+            <td>100</td>
+            <td>100</td>
+            <td><span class="badge badge-green">Full Credit</span></td>
+          </tr>
+          <tr>
+            <td>Module 4 Assignment</td>
+            <td>100</td>
+            <td>100</td>
+            <td><span class="badge badge-green">Full Credit</span></td>
+          </tr>
+          <tr>
+            <td>Module 5 Assignment</td>
+            <td>100</td>
+            <td>100</td>
+            <td><span class="badge badge-green">Full Credit</span></td>
+          </tr>
+          <tr>
+            <td>Module 7 Quiz</td>
+            <td><span class="zero">0</span></td>
+            <td>50</td>
+            <td><span class="badge badge-red">Zero</span></td>
+          </tr>
+          <tr>
+            <td>Eating With Cannibals Discussion</td>
+            <td><span class="zero">0</span></td>
+            <td>30</td>
+            <td><span class="badge badge-red">Zero</span></td>
+          </tr>
+          <tr>
+            <td>Suri Lip Plate Discussion</td>
+            <td><span class="zero">0</span></td>
+            <td>30</td>
+            <td><span class="badge badge-red">Zero</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px; font-size:0.85rem; color:#777;">
+        Confirmed by April 5 live scrape (activity stream). Gradebook DOM scraper returned 0 rows — activity stream was the source for these grades.
+      </p>
+    </div>
+
+    <!-- ENGR-101 -->
+    <div class="course-block">
+      <h3>ENGR-101 — Introduction to Engineering &nbsp; <span class="badge badge-blue">B+</span></h3>
+      <table>
+        <thead>
+          <tr><th>Assignment</th><th>Score</th><th>Points</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>All Assignments (bulk)</td>
+            <td>100%</td>
+            <td>—</td>
+            <td><span class="badge badge-green">Full Credit</span></td>
+          </tr>
+          <tr>
+            <td>Attendance — Feb 5</td>
+            <td><span class="zero">0</span></td>
+            <td>1</td>
+            <td><span class="badge badge-red">Absent</span></td>
+          </tr>
+          <tr>
+            <td>Attendance — Feb 26</td>
+            <td><span class="zero">0</span></td>
+            <td>1</td>
+            <td><span class="badge badge-red">Absent</span></td>
+          </tr>
+          <tr>
+            <td>Attendance — Mar 12</td>
+            <td><span class="zero">0</span></td>
+            <td>1</td>
+            <td><span class="badge badge-red">Absent</span></td>
+          </tr>
+          <tr>
+            <td>Attendance — Mar 26</td>
+            <td><span class="zero">0</span></td>
+            <td>1</td>
+            <td><span class="badge badge-red">Absent</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px; font-size:0.85rem; color:#777;">
+        Mar 12 and Mar 26 absences confirmed by April 5 live scrape. Feb 5 and Feb 26 from IndexedDB snapshot (March 24, 2026).
+      </p>
+    </div>
+
+    <!-- UA-101 -->
+    <div class="course-block">
+      <h3>UA-101 — University Achievement &nbsp; <span class="badge badge-green">~94%</span></h3>
+      <table>
+        <thead>
+          <tr><th>Assignment</th><th>Score</th><th>Points</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Most Assignments</td>
+            <td>100%</td>
+            <td>—</td>
+            <td><span class="badge badge-green">Full Credit</span></td>
+          </tr>
+          <tr>
+            <td>Module 6 Quiz</td>
+            <td><span class="warn">8%</span></td>
+            <td>—</td>
+            <td><span class="badge badge-orange">Low</span></td>
+          </tr>
+          <tr>
+            <td>BMC Quiz</td>
+            <td><span class="warn">47%</span></td>
+            <td>—</td>
+            <td><span class="badge badge-orange">Below Average</span></td>
+          </tr>
+          <tr>
+            <td>Attendance</td>
+            <td>75%</td>
+            <td>—</td>
+            <td><span class="badge badge-yellow">Fair</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MATH-125 -->
+    <div class="course-block">
+      <h3>MATH-125 — Pre-Calculus &nbsp; <span class="badge badge-yellow">~79% est.</span></h3>
+      <p style="font-size:0.88rem; color:#666; margin-top:4px;">
+        Individual assignment grades were not synced to the local IndexedDB cache. The ~79% estimate is derived from overall course standing visible in the activity stream. Detailed grade breakdown unavailable until next manual sync.
+      </p>
+    </div>
+
+  </section>
+
+  <!-- ===== UNREAD MESSAGES ===== -->
+  <section>
+    <h2>Unread Messages — Inbox Summary</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Unread Count</th>
+          <th>Priority</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>EN-103</strong></td>
+          <td><span class="zero">14</span></td>
+          <td><span class="badge badge-red">URGENT</span></td>
+          <td>All from Prof. O'Rourke. Message content not captured — see Data Source Note.</td>
+        </tr>
+        <tr>
+          <td><strong>ENGR-101</strong></td>
+          <td><span class="warn">5</span></td>
+          <td><span class="badge badge-orange">Review Soon</span></td>
+          <td>Likely related to attendance policy or upcoming deadlines.</td>
+        </tr>
+        <tr>
+          <td><strong>MATH-125</strong></td>
+          <td>4</td>
+          <td><span class="badge badge-yellow">Check This Week</span></td>
+          <td>Unknown content; review when possible.</td>
+        </tr>
+        <tr>
+          <td><strong>UA-101</strong></td>
+          <td>0</td>
+          <td><span class="badge badge-green">Clear</span></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>REL-100</strong></td>
+          <td>0</td>
+          <td><span class="badge badge-green">Clear</span></td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px; font-size:0.85rem; color:#777;">
+      Message counts from IndexedDB snapshot (March 24, 2026). Counts may be higher as of April 5.
+    </p>
+  </section>
+
+  <!-- ===== ACTION PLAN ===== -->
+  <section>
+    <h2>Action Plan</h2>
+
+    <p style="margin-bottom:12px; font-weight:600; color:#b71c1c;">Immediate (today):</p>
+    <ul class="action-list">
+      <li class="urgent">Open Blackboard → EN-103 → Messages. Read all 14 messages from Prof. O'Rourke and reply or schedule a meeting immediately.</li>
+      <li class="urgent">Review EN-103 gradebook. Understand if the three zero/near-zero grades are final or if there is a late-submission or make-up policy.</li>
+      <li class="urgent">Contact Prof. O'Rourke (EN-103) to discuss grade standing and path forward. Course may be at failing risk.</li>
+    </ul>
+
+    <p style="margin-top:16px; margin-bottom:12px; font-weight:600; color:#e65100;">This week:</p>
+    <ul class="action-list">
+      <li class="warn">REL-100: Complete or make up Module 7 Quiz, Eating With Cannibals Discussion, and Suri Lip Plate Discussion if any extensions are available.</li>
+      <li class="warn">ENGR-101: Read the 5 unread messages. Monitor attendance — 4 absences already recorded; another may trigger grade penalty.</li>
+      <li>MATH-125: Read the 4 unread messages. Ensure assignments are on track. Request a gradebook sync to confirm actual grade.</li>
+    </ul>
+
+    <p style="margin-top:16px; margin-bottom:12px; font-weight:600; color:#1565c0;">Ongoing:</p>
+    <ul class="action-list">
+      <li>UA-101: Maintain current A average. Improve Module 6 Quiz and BMC Quiz performance in future attempts.</li>
+      <li>Check Blackboard messages daily to avoid missed communications.</li>
+    </ul>
+  </section>
+
+  <!-- ===== DATA SOURCE NOTE ===== -->
+  <div class="note-box">
+    <strong>Data Source Note</strong><br /><br />
+    This audit combines two data sources:<br />
+    <strong>1. April 5, 2026 live scrape (15:59 UTC):</strong> RangeKeeper Chrome extension scraped the Blackboard activity stream (<code>/ultra/stream</code>), capturing 27 tasks and 5 confirmed grades (REL-100 Module 7 Quiz 0/50, Eating With Cannibals Discussion 0/30, Suri Lip Plate Discussion 0/30; ENGR-101 Attendance Mar 26 0/1, Attendance Mar 12 0/1). The REL-100 gradebook DOM scraper returned 0 rows (Blackboard rendered no gradebook table in the DOM at scrape time).<br /><br />
+    <strong>2. IndexedDB snapshot (March 24, 2026):</strong> Local RangeKeeperDB v3 cache containing 353 grades and 27 unread messages across all courses. MATH-125 individual grades were not present in this cache.<br /><br />
+    <strong>Why EN-103 message content is missing:</strong> The April 5 scraping session started on the EN-103 messages page (<code>/ultra/courses/_413210_1/messages</code>). However, <code>content.js</code> (line 362) classified this URL as <code>course-page</code> instead of <code>course-messages</code>, so the messages scraper did not execute. Only the message <em>count</em> (14 unread) is known from the IndexedDB snapshot. The actual message content from Prof. O'Rourke has not been captured. This is a known bug in the URL pattern matching logic in <code>content.js</code>.
+  </div>
+
+</div>
+
+<footer>
+  Generated April 5, 2026 from live Blackboard scrape (15:59 UTC) + IndexedDB snapshot (March 24, 2026) &nbsp;|&nbsp; RangeKeeper v2
+</footer>
+
+</body>
+</html>
