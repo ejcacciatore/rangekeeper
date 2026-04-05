@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Massimo McRae — Grade Audit, Spring 2026</title>
+<style>
+  :root {
+    --green: #1a7f37; --green-bg: #dafbe1;
+    --yellow: #9a6700; --yellow-bg: #fff8c5;
+    --red: #cf222e; --red-bg: #ffebe9;
+    --gray: #57606a; --gray-bg: #f6f8fa;
+    --blue: #0969da; --blue-bg: #ddf4ff;
+    --purple: #8250df; --purple-bg: #fbefff;
+    --border: #d0d7de;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); font-size: 14px; background: #f6f8fa; color: #1f2328; }
+  
+  header { background: #1f2328; color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .meta { font-size: 12px; color: #8b949e; margin-top: 4px; }
+  .sync-badge { background: #3fb950; color: #0d1117; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Advisor Note Banner */
+  .advisor-banner { background: #fff8c5; border: 1px solid #d4a017; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+  .advisor-banner h3 { font-size: 13px; font-weight: 700; color: #9a6700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .advisor-banner p { font-size: 13px; color: #57606a; line-height: 1.6; }
+
+  /* Grade Summary Bar */
+  .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+  .summary-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .summary-card .course { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); margin-bottom: 6px; }
+  .summary-card .grade { font-size: 28px; font-weight: 700; line-height: 1; }
+  .summary-card .label { font-size: 11px; color: var(--gray); margin-top: 4px; }
+  .summary-card .source { font-size: 10px; color: var(--blue); margin-top: 6px; }
+  .grade-A { color: var(--green); }
+  .grade-B { color: var(--blue); }
+  .grade-C { color: var(--yellow); }
+  .grade-D { color: #e16f24; }
+  .grade-F { color: var(--red); }
+  .grade-pending { color: var(--gray); }
+
+  /* Audit section */
+  .audit-section { background: white; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+  .audit-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .audit-header h2 { font-size: 16px; font-weight: 700; }
+  .audit-header .course-meta { font-size: 12px; color: var(--gray); }
+  .audit-header .overall-badge { padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+
+  /* Advisor vs BB comparison */
+  .compare-bar { background: var(--gray-bg); border-bottom: 1px solid var(--border); padding: 10px 20px; display: grid; grid-template-columns: 1fr 1fr 120px; gap: 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); }
+  
+  /* Grade table */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--gray-bg); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); padding: 8px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f6f8fa; }
+  
+  .item-name { font-weight: 500; }
+  .item-name .late-flag { color: var(--red); font-size: 11px; font-weight: 600; margin-left: 6px; background: var(--red-bg); padding: 1px 6px; border-radius: 4px; }
+  .item-name .extended-flag { color: var(--purple); font-size: 11px; font-weight: 600; margin-left: 6px; background: var(--purple-bg); padding: 1px 6px; border-radius: 4px; }
+  .item-name .locked-flag { color: var(--gray); font-size: 11px; font-weight: 600; margin-left: 6px; background: var(--gray-bg); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); }
+
+  .score { font-weight: 700; font-size: 15px; }
+  .score-max { font-size: 11px; color: var(--gray); font-weight: 400; }
+  .pct { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 600; display: inline-block; }
+  .pct-A { background: var(--green-bg); color: var(--green); }
+  .pct-B { background: var(--blue-bg); color: var(--blue); }
+  .pct-C { background: var(--yellow-bg); color: var(--yellow); }
+  .pct-D { background: #fff0e6; color: #e16f24; }
+  .pct-F { background: var(--red-bg); color: var(--red); }
+  .pct-zero { background: var(--red-bg); color: var(--red); }
+  .pct-na { background: var(--gray-bg); color: var(--gray); }
+  .pct-pending { background: var(--gray-bg); color: var(--gray); }
+
+  .status-graded { color: var(--green); font-size: 12px; font-weight: 600; }
+  .status-ungraded { color: var(--gray); font-size: 12px; }
+  .status-late { color: var(--red); font-size: 12px; font-weight: 600; }
+  .status-pastdue { color: var(--red); font-size: 12px; font-weight: 600; }
+  .status-unopened { color: var(--gray); font-size: 12px; font-style: italic; }
+  .status-extended { color: var(--purple); font-size: 12px; font-weight: 600; }
+  .status-notgraded { color: var(--gray); font-size: 12px; }
+
+  /* Advisor match indicators */
+  .verify-match { color: var(--green); font-weight: 700; font-size: 13px; }
+  .verify-diff { color: var(--red); font-weight: 700; font-size: 13px; }
+  .verify-info { color: var(--blue); font-weight: 700; font-size: 13px; }
+  .verify-warn { color: var(--yellow); font-weight: 700; font-size: 13px; }
+
+  /* Advisor crosscheck box */
+  .crosscheck { background: var(--gray-bg); border: 1px solid var(--border); border-radius: 8px; margin: 0 20px 20px; padding: 14px 16px; }
+  .crosscheck h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); margin-bottom: 10px; }
+  .crosscheck-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; font-size: 13px; line-height: 1.5; }
+  .crosscheck-row:last-child { margin-bottom: 0; }
+  .icon-match { color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .icon-diff { color: var(--red); font-weight: 700; flex-shrink: 0; }
+  .icon-info { color: var(--blue); font-weight: 700; flex-shrink: 0; }
+  .icon-warn { color: var(--yellow); font-weight: 700; flex-shrink: 0; }
+
+  /* Total row */
+  .total-row td { background: var(--gray-bg) !important; font-weight: 700; border-top: 2px solid var(--border); }
+
+  /* Category header row */
+  .cat-row td { background: #f0f6ff; font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .5px; padding: 6px 20px; }
+
+  /* Upcoming section */
+  .upcoming-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px 20px; }
+  .upcoming-item { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+  .upcoming-item .due { font-size: 11px; font-weight: 700; color: var(--red); text-transform: uppercase; margin-bottom: 4px; }
+  .upcoming-item .name { font-size: 13px; font-weight: 500; line-height: 1.4; }
+  .upcoming-item .course-tag { font-size: 11px; color: var(--gray); margin-top: 4px; }
+
+  .footnote { font-size: 11px; color: var(--gray); padding: 12px 20px; background: var(--gray-bg); border-top: 1px solid var(--border); }
+
+  @media (max-width: 768px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .upcoming-grid { grid-template-columns: 1fr; }
+    .compare-bar { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Massimo McRae — Grade Audit, Spring 2026</h1>
+    <div class="meta">202610 · University of Alabama · Generated April 3, 2026 · Source: Live Blackboard + WebAssign</div>
+  </div>
+  <span class="sync-badge">● LIVE DATA</span>
+</header>
+
+<div class="container">
+
+  <!-- Advisor Notes Banner -->
+  <div class="advisor-banner">
+    <h3>📋 Advisor Note Cross-Check</h3>
+    <p>This page verifies every claim in the advisor's April 3 course notes against live Blackboard and WebAssign data. Each section shows what the advisor reported vs. what the gradebook actually shows, with discrepancies flagged.</p>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="course">EN 103</div>
+      <div class="grade grade-pending">—</div>
+      <div class="label">No overall grade in BB</div>
+      <div class="source">⚠ Advisor: grade pending (Annot. Bib dispute)</div>
+    </div>
+    <div class="summary-card">
+      <div class="course">REL 100</div>
+      <div class="grade grade-C">C+</div>
+      <div class="label">565 / 710 pts</div>
+      <div class="source">✓ Advisor: C+ confirmed</div>
+    </div>
+    <div class="summary-card">
+      <div class="course">UA 101</div>
+      <div class="grade grade-A">94%</div>
+      <div class="label">Midterm: 55.3 / 58.33</div>
+      <div class="source">✓ Advisor: ~94% confirmed</div>
+    </div>
+    <div class="summary-card">
+      <div class="course">MATH 125</div>
+      <div class="grade grade-A">95.37%</div>
+      <div class="label">A · WebAssign</div>
+      <div class="source">✓ Advisor: ~95% confirmed</div>
+    </div>
+    <div class="summary-card">
+      <div class="course">ENGR 101</div>
+      <div class="grade grade-B">55/69</div>
+      <div class="label">79.7% · B–</div>
+      <div class="source">⚠ Advisor says B+: see below</div>
+    </div>
+  </div>
+  <!-- ===================== EN 103 ===================== -->
+  <div class="audit-section">
+    <div class="audit-header">
+      <div>
+        <h2>EN 103 — English Composition</h2>
+        <div class="course-meta">202610-EN-103-025 · Prof. O'Rourke · BB ID: _413210_1</div>
+      </div>
+      <span class="overall-badge" style="background:#fff8c5;color:#9a6700">Grade: Pending Dispute</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Assignment</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>%</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="item-name">Taste of the Town Turn In</td>
+          <td>2/2/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">96 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-A">96%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Annotated Bibliography <span class="late-flag">LATE</span></td>
+          <td>3/2/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">0 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Research Paper</td>
+          <td>4/10/26</td>
+          <td class="status-unopened">Not submitted yet</td>
+          <td class="score">— <span class="score-max">/ —</span></td>
+          <td><span class="pct pct-pending">Upcoming</span></td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3">Running Total (graded items only)</td>
+          <td class="score">96 <span class="score-max">/ 200</span></td>
+          <td><span class="pct pct-F">48% if 0 stands</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="crosscheck">
+      <h4>Advisor Note vs. Blackboard</h4>
+      <div class="crosscheck-row"><span class="icon-warn">⚠</span><span><strong>Overall grade:</strong> Advisor says "not stated." BB shows no computed overall. Running score is 96/200 (48%) if the 0 on Annotated Bib stands — this is the core issue.</span></div>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>Annotated Bibliography:</strong> Advisor says grade update is pending and will "hear from professor." BB currently shows <strong>0/100 (Late)</strong>. This is real and unresolved — extension must flag this as a disputed grade until changed.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Research Paper due 4/10:</strong> Confirmed — item exists in gradebook, not yet submitted.</span></div>
+      <div class="crosscheck-row"><span class="icon-info">ℹ</span><span><strong>Journal assignment:</strong> Advisor notes "finish journal and bring to class." This item does NOT appear in the Blackboard gradebook — likely not a graded BB item. Cannot verify via extension.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Progress note:</strong> Advisor says "making good progress on paper." No BB data available for in-progress papers, consistent with gradebook state.</span></div>
+    </div>
+  </div>
+  <!-- ===================== REL 100 ===================== -->
+  <div class="audit-section">
+    <div class="audit-header">
+      <div>
+        <h2>REL 100 — Religion in America</h2>
+        <div class="course-meta">202610-REL-100-919 · Heaton / Loewen · BB ID: _401764_1</div>
+      </div>
+      <span class="overall-badge" style="background:#fff8c5;color:#9a6700">C+ · 565/710</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Assignment</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>%</th>
+      </tr></thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="5">Module 1</td></tr>
+        <tr>
+          <td class="item-name">Module 1 Quiz <span class="late-flag">LATE</span></td>
+          <td>2/13/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">45 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-B">90%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Naming and Classifying Relationship With Religion Discussion <span class="late-flag">LATE · 0</span></td>
+          <td>2/13/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">0 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Definition of Religion Discussion</td>
+          <td>2/13/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 2</td></tr>
+        <tr>
+          <td class="item-name">Module 2 Quiz <span class="late-flag">LATE</span></td>
+          <td>2/20/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Responsibility in Thinking/Talking About Religion Discussion</td>
+          <td>2/20/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Comparing Religious Definitions Discussion</td>
+          <td>2/20/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 3</td></tr>
+        <tr>
+          <td class="item-name">Module 3 Quiz</td>
+          <td>2/27/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Poniewozik Article and Essentialism Discussion</td>
+          <td>2/27/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 4</td></tr>
+        <tr>
+          <td class="item-name">Module 4 Quiz</td>
+          <td>3/6/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Functionalism or Essentialism Discussion</td>
+          <td>3/6/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Function of Religion Video Debate Discussion</td>
+          <td>3/6/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 5</td></tr>
+        <tr>
+          <td class="item-name">Module 5 Quiz</td>
+          <td>3/13/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Jean-Paul Sartre Discussion</td>
+          <td>3/13/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 6</td></tr>
+        <tr>
+          <td class="item-name">Module 6 Quiz <span class="late-flag">LATE</span></td>
+          <td>3/27/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">TED Talk — Noah Feldman Discussion</td>
+          <td>3/27/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Family Resemblance Characteristics Discussion</td>
+          <td>3/27/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 7 — ⚠ LATE / PAST DUE (Apr 3)</td></tr>
+        <tr>
+          <td class="item-name">Suri Lip Discussion <span class="late-flag">LATE — 0/30</span></td>
+          <td>4/3/26</td>
+          <td class="status-pastdue">Past Due</td>
+          <td class="score">0 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Eating With Cannibals Discussion <span class="late-flag">LATE — 0/30</span></td>
+          <td>4/3/26</td>
+          <td class="status-pastdue">Past Due</td>
+          <td class="score">0 <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Module 7 Quiz <span class="late-flag">LATE — 0/50</span></td>
+          <td>4/3/26</td>
+          <td class="status-pastdue">Past Due</td>
+          <td class="score">0 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Module 8 — Upcoming (Due Apr 10)</td></tr>
+        <tr>
+          <td class="item-name">Heaven's Gate Reaction Discussion</td>
+          <td>4/10/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-pending">Upcoming</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Making the Strange Familiar Discussion</td>
+          <td>4/10/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-pending">Upcoming</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Module 8 Quiz</td>
+          <td>4/10/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-pending">Upcoming</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Modules 9–10 — Future</td></tr>
+        <tr>
+          <td class="item-name">Rituals Discussion</td>
+          <td>4/17/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-pending">Future</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Module 9 Quiz</td>
+          <td>4/17/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-pending">Future</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Religion and Civic Discourse Discussion</td>
+          <td>4/24/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-pending">Future</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Free Exercise of Religion Discussion</td>
+          <td>4/24/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 30</span></td>
+          <td><span class="pct pct-pending">Future</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Module 10 Quiz</td>
+          <td>4/24/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-pending">Future</span></td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3">Current Total (Blackboard)</td>
+          <td class="score">565 <span class="score-max">/ 710</span></td>
+          <td><span class="pct pct-C">79.6% · C+</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="crosscheck">
+      <h4>Advisor Note vs. Blackboard</h4>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>C+ overall:</strong> BB confirms 565/710 = 79.6% = C+. Exact match.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Module 7 is late:</strong> Confirmed — all 3 items (2 discussions + quiz) show "Past due · 0 pts" in BB.</span></div>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>Late penalty: "90% credit today"</strong> — Advisor says can still complete for 90% credit. BB shows 0/30 and 0/50 but items are marked "Past Due" not "Closed." <strong>Extension should flag: submit immediately for potential partial credit.</strong></span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Module 6 = 100%:</strong> BB confirms Module 6 Quiz = 50/50 (Late but full credit). Match.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Module 8 upcoming (due ~4/9–4/10):</strong> BB shows all 3 Module 8 items due 4/10. Advisor says "due Thursday 4/9" — slight discrepancy (may be 11:59pm Thursday CST = 12:59am Friday EDT). Essentially same deadline.</span></div>
+    </div>
+  </div>
+  <!-- ===================== UA 101 ===================== -->
+  <div class="audit-section">
+    <div class="audit-header">
+      <div>
+        <h2>UA 101 — University Academic</h2>
+        <div class="course-meta">202610-UA-101-030 · BB ID: _398913_1</div>
+      </div>
+      <span class="overall-badge" style="background:#dafbe1;color:#1a7f37">~94% · Midterm 55.3/58.33</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Assignment</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>%</th>
+      </tr></thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="5">Thriving Surveys</td></tr>
+        <tr>
+          <td class="item-name">Take Thriving Survey A <span class="late-flag">LATE</span></td>
+          <td>2/7/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">10 <span class="score-max">/ 10</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Take Thriving Survey B</td>
+          <td>3/7/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">10 <span class="score-max">/ 10</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Take Thriving Survey C</td>
+          <td>4/11/26</td>
+          <td class="status-unopened">Upcoming</td>
+          <td class="score">— <span class="score-max">/ 10</span></td>
+          <td><span class="pct pct-pending">Due 4/11</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Quizzes</td></tr>
+        <tr>
+          <td class="item-name">Take This Survey: Answer These AI Questions</td>
+          <td>2/21/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">10 <span class="score-max">/ 10</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Quiz on Value Proposition and Venture Hypothesis <span class="late-flag">LATE</span></td>
+          <td>2/2/26</td>
+          <td class="status-unopened">Unopened</td>
+          <td class="score">0 <span class="score-max">/ ?</span></td>
+          <td><span class="pct pct-zero">Not submitted</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Business Model Canvas Quiz</td>
+          <td>2/9/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">2.33 <span class="score-max">/ 5</span></td>
+          <td><span class="pct pct-D">47%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Quiz on Empathy Based Customer Discovery</td>
+          <td>2/16/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">5 <span class="score-max">/ 5</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Quiz on MVPs</td>
+          <td>3/30/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">7 <span class="score-max">/ 7</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Assignments</td></tr>
+        <tr>
+          <td class="item-name">Assignment: Time Management (Foundation)</td>
+          <td>2/7/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">30.9 <span class="score-max">/ 40</span></td>
+          <td><span class="pct pct-C">77%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Assignment: Campus Resources (Support Pillars)</td>
+          <td>2/21/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">40 <span class="score-max">/ 40</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Assignment: Career/Major Exploration & Portfolio <span class="late-flag">LATE ×2</span></td>
+          <td>3/7/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">40 <span class="score-max">/ 40</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Assignment: Financial Planning (Materials)</td>
+          <td>4/11/26</td>
+          <td class="status-unopened">Upcoming</td>
+          <td class="score">— <span class="score-max">/ ?</span></td>
+          <td><span class="pct pct-pending">Due 4/11</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Presentations (Ungraded)</td></tr>
+        <tr>
+          <td class="item-name">BMC Presentation</td>
+          <td>2/26/26</td>
+          <td class="status-notgraded">Not graded</td>
+          <td class="score">— <span class="score-max">/ —</span></td>
+          <td><span class="pct pct-pending">Pending</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Customer Discovery Presentation</td>
+          <td>3/30/26</td>
+          <td class="status-notgraded">Not graded</td>
+          <td class="score">— <span class="score-max">/ —</span></td>
+          <td><span class="pct pct-pending">Pending</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Attendance</td></tr>
+        <tr>
+          <td class="item-name">Attendance (Ongoing)</td>
+          <td>Ongoing</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">75 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-C">75%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Totals</td></tr>
+        <tr>
+          <td class="item-name">Thriving Skills Modules Total (20% of course grade)</td>
+          <td>—</td>
+          <td class="status-graded">Running</td>
+          <td class="score">—</td>
+          <td><span class="pct pct-A">93.93%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Quiz Percentage</td>
+          <td>—</td>
+          <td class="status-graded">Running</td>
+          <td class="score">50 <span class="score-max">/ 50</span></td>
+          <td><span class="pct pct-A">100%</span></td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3">Midterm Points</td>
+          <td class="score">55.3 <span class="score-max">/ 58.33</span></td>
+          <td><span class="pct pct-A">94.8%</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="crosscheck">
+      <h4>Advisor Note vs. Blackboard</h4>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>~94% overall:</strong> BB midterm points = 55.3/58.33 = 94.8%. Match.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Thriving Module 4 remaining:</strong> Confirmed — Thriving Survey C and Financial Planning both due 4/11. Module 4 content shows only 1/5 items started in outline.</span></div>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>Due date discrepancy:</strong> Advisor says "due Friday 4/10." BB shows 4/11/26. This is the same CST/EDT timezone offset — 11:59pm Friday CDT = 12:59am Saturday EDT. Functionally Friday night.</span></div>
+      <div class="crosscheck-row"><span class="icon-info">ℹ</span><span><strong>Quiz on Value Proposition:</strong> Shows "Unopened · Late" — possible missing grade. Not reflected in BB total yet.</span></div>
+    </div>
+  </div>
+  <!-- ===================== MATH 125 ===================== -->
+  <div class="audit-section">
+    <div class="audit-header">
+      <div>
+        <h2>MATH 125 — Calculus I</h2>
+        <div class="course-meta">202610-MATH-125-007 (lecture) + 107 (recitation) · Prof. Jedidiah Agyei · WebAssign via Cengage</div>
+      </div>
+      <span class="overall-badge" style="background:#dafbe1;color:#1a7f37">95.37% · A · WebAssign</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Assignment</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>%</th>
+      </tr></thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="5">Tests (weighted 64% of grade)</td></tr>
+        <tr>
+          <td class="item-name">Test 01</td>
+          <td>~Feb 2026</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">89.80 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-B">89.8%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Test 02</td>
+          <td>~Feb 2026</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">104.15 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-A">104.2% ★</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Test 03</td>
+          <td>~Mar 2026</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">84.70 <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-B">84.7%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Test 04 <span class="locked-flag">LOCKED</span></td>
+          <td>4/14/26</td>
+          <td class="status-unopened">Requires Honor Code Quiz ≥70%</td>
+          <td class="score">— <span class="score-max">/ 100</span></td>
+          <td><span class="pct pct-pending">Apr 14</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Homework — Past / Completed (21 assignments, weighted 14.4%)</td></tr>
+        <tr><td>HW-S1.0-Basic Algebra and Trigonometric</td><td>Jan 13</td><td class="status-graded">Complete</td><td class="score">17 <span class="score-max">/ 18</span></td><td><span class="pct pct-A">94.4%</span></td></tr>
+        <tr><td>HW-S1.3-The Limit of a Function</td><td>Jan 25</td><td class="status-graded">Complete</td><td class="score">31.5 <span class="score-max">/ 31.5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S1.4-Calculating Limits</td><td>Jan 25</td><td class="status-graded">Complete</td><td class="score">19 <span class="score-max">/ 19</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S1.5-Continuity</td><td>Jan 26</td><td class="status-graded">Complete</td><td class="score">20 <span class="score-max">/ 21</span></td><td><span class="pct pct-A">95.2%</span></td></tr>
+        <tr><td>HW-S1.6-Limits Involving Infinity</td><td>Jan 24</td><td class="status-graded">Complete</td><td class="score">25 <span class="score-max">/ 25</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.1-Derivatives and Rates of Change</td><td>Jan 27</td><td class="status-graded">Complete</td><td class="score">24 <span class="score-max">/ 24</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.2-The Derivative as a Function</td><td>Feb 4</td><td class="status-graded">Complete</td><td class="score">27.5 <span class="score-max">/ 27.5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.3-Basic Differentiation Formulas</td><td>Feb 5</td><td class="status-graded">Complete</td><td class="score">26.71 <span class="score-max">/ 26.71</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.4-Product and Quotient Rules</td><td>Feb 7</td><td class="status-graded">Complete</td><td class="score">13.62 <span class="score-max">/ 13.62</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.5-The Chain Rule</td><td>Feb 11</td><td class="status-graded">Complete</td><td class="score">23 <span class="score-max">/ 23</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.6-Implicit Differentiation</td><td>Feb 14</td><td class="status-graded">Complete</td><td class="score">11 <span class="score-max">/ 11</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S2.7-Related Rates</td><td>Feb 17</td><td class="status-graded">Complete</td><td class="score">10 <span class="score-max">/ 8</span></td><td><span class="pct pct-A">125% ★</span></td></tr>
+        <tr><td>HW-S2.8-Linear Approximations and Differentials</td><td>Feb 24</td><td class="status-graded">Complete</td><td class="score">12 <span class="score-max">/ 12</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S3.3-Derivatives of Log and Exp Functions</td><td>Feb 28</td><td class="status-graded">Complete</td><td class="score">16 <span class="score-max">/ 16</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S3.5-Inverse Trigonometric Functions</td><td>Mar 3</td><td class="status-graded">Complete</td><td class="score">22 <span class="score-max">/ 22</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S4.1-MaxMin Values</td><td>Mar 7</td><td class="status-graded">Complete</td><td class="score">35 <span class="score-max">/ 35</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>HW-S4.2-The Mean Value Theorem</td><td>Mar 10</td><td class="status-graded">Complete</td><td class="score">17 <span class="score-max">/ 17</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td class="item-name">HW-S4.3-Derivatives and Shapes of Graphs <span class="late-flag">31.5%</span></td><td>Mar 31</td><td class="status-graded">Complete (Extended)</td><td class="score">18.9 <span class="score-max">/ 60</span></td><td><span class="pct pct-F">31.5% ⚠</span></td></tr>
+        <tr><td>HW-S4.4-Curve Sketching</td><td>Mar 26</td><td class="status-graded">Complete</td><td class="score">22 <span class="score-max">/ 22</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr class="cat-row"><td colspan="5">Homework — Current / Open (Extended deadlines)</td></tr>
+        <tr>
+          <td class="item-name">HW-S4.5-Optimization Problems <span class="extended-flag">EXTENDED</span></td>
+          <td>Apr 7, 12:59 AM</td>
+          <td class="status-extended">In Progress</td>
+          <td class="score">18.9 <span class="score-max">/ 27</span></td>
+          <td><span class="pct pct-C">70.0%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">HW-S4.7-Antiderivatives <span class="extended-flag">EXTENDED</span></td>
+          <td>Apr 9, 12:59 AM</td>
+          <td class="status-extended">In Progress</td>
+          <td class="score">31.5 <span class="score-max">/ 46</span></td>
+          <td><span class="pct pct-C">68.5%</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">HW-S5.1-Areas and Distances</td>
+          <td>Apr 7, 12:59 AM</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 12</span></td>
+          <td><span class="pct pct-pending">Due Apr 7</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">HW-S5.2-The Definite Integral</td>
+          <td>Apr 8, 12:59 AM</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 17.62</span></td>
+          <td><span class="pct pct-pending">Due Apr 8</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">HW-S5.3-Evaluating Definite Integrals</td>
+          <td>Apr 11, 12:59 AM</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 20.62</span></td>
+          <td><span class="pct pct-pending">Due Apr 11</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">HW-S5.4-Fundamental Theorem of Calculus</td>
+          <td>Apr 14, 12:59 AM</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 17</span></td>
+          <td><span class="pct pct-pending">Due Apr 14</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Recitation (weighted 22%)</td></tr>
+        <tr><td>Recitation 01–08 (8 sessions)</td><td>Jan–Mar</td><td class="status-graded">Complete</td><td class="score">103.43% avg</td><td><span class="pct pct-A">103.4% avg</span></td></tr>
+        <tr class="total-row">
+          <td colspan="3">Total Grade (WebAssign · Apr 3, 2026)</td>
+          <td class="score">95.37%</td>
+          <td><span class="pct pct-A">A</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="crosscheck">
+      <h4>Advisor Note vs. WebAssign</h4>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>~95% overall:</strong> WebAssign confirms 95.37% = A. Match.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Missed assignments with extensions:</strong> Confirmed — HW-S4.5 and HW-S4.7 both flagged "Extended" and currently below 70%. Also HW-S4.3 closed at 31.5%.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Extension credit = 70% max:</strong> Implied by current partial scores; consistent with Agyei's extension policy.</span></div>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>Due date discrepancies (advisor vs. WebAssign):</strong> Advisor says HW 5.1 due Mon 4/6, HW 5.2 due Tue 4/7, HW 5.3 due Fri 4/10, HW 5.4 due Mon 4/13. WebAssign shows: 5.1 = Tue Apr 7, 5.2 = Wed Apr 8, 5.3 = Sat Apr 11, 5.4 = Tue Apr 14. Consistent 1-day offset — timezone artifact (CST vs. EDT). Same assignments, same deadlines.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Exam 4 on 4/14:</strong> WebAssign shows Test 04 available Apr 14. Locked until Honor Code quiz ≥70% completed first.</span></div>
+      <div class="crosscheck-row"><span class="icon-info">ℹ</span><span><strong>BB gradebook is empty for MATH-125.</strong> All data lives in WebAssign only. Extension must use LTI launch path, not BB gradebook URL.</span></div>
+    </div>
+  </div>
+  <!-- ===================== ENGR 101 ===================== -->
+  <div class="audit-section">
+    <div class="audit-header">
+      <div>
+        <h2>ENGR 101 — Introduction to Engineering</h2>
+        <div class="course-meta">202610-ENGR-101-006 · Prof. Andrew Monk · BB ID: _397881_1</div>
+      </div>
+      <span class="overall-badge" style="background:#ddf4ff;color:#0969da">55/69 pts · 79.7% (B–)</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:40%">Assignment</th>
+        <th>Due</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>%</th>
+      </tr></thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="5">Professional Development Assignments</td></tr>
+        <tr><td>VMock Resume</td><td>2/7/26</td><td class="status-graded">Graded</td><td class="score">10 <span class="score-max">/ 10</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Career Fair Assignment</td><td>2/14/26</td><td class="status-graded">Graded</td><td class="score">10 <span class="score-max">/ 10</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Professional Communication Assignment</td><td>2/21/26</td><td class="status-graded">Graded</td><td class="score">10 <span class="score-max">/ 10</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Professional Development 1</td><td>2/14/26</td><td class="status-graded">Graded</td><td class="score">5 <span class="score-max">/ 5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Professional Development 2</td><td>2/14/26</td><td class="status-graded">Graded</td><td class="score">5 <span class="score-max">/ 5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Professional Development 3</td><td>3/14/26</td><td class="status-graded">Graded</td><td class="score">5 <span class="score-max">/ 5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr><td>Professional Development 4</td><td>3/14/26</td><td class="status-graded">Graded</td><td class="score">5 <span class="score-max">/ 5</span></td><td><span class="pct pct-A">100%</span></td></tr>
+        <tr>
+          <td class="item-name">Thursday Departmental Visit <span class="late-flag">LATE — 0/10</span></td>
+          <td>2/1/26</td>
+          <td class="status-graded">Graded</td>
+          <td class="score">0 <span class="score-max">/ 10</span></td>
+          <td><span class="pct pct-zero">0%</span></td>
+        </tr>
+        <tr class="cat-row"><td colspan="5">Attendance (tracked per-class)</td></tr>
+        <tr><td>Attendance, Jan 15</td><td>Jan 15</td><td class="status-graded">Graded</td><td class="score">1 <span class="score-max">/ 1</span></td><td><span class="pct pct-A">✓</span></td></tr>
+        <tr><td>Attendance, Jan 22</td><td>Jan 22</td><td class="status-graded">Graded</td><td class="score">1 <span class="score-max">/ 1</span></td><td><span class="pct pct-A">✓</span></td></tr>
+        <tr><td class="item-name">Attendance, Feb 5 <span class="late-flag">ABSENT</span></td><td>Feb 5</td><td class="status-graded">Graded</td><td class="score">0 <span class="score-max">/ 1</span></td><td><span class="pct pct-zero">✗ Absent</span></td></tr>
+        <tr><td>Attendance, Feb 12 (Career Fair)</td><td>Feb 12</td><td class="status-graded">Graded</td><td class="score">1 <span class="score-max">/ 1</span></td><td><span class="pct pct-A">✓</span></td></tr>
+        <tr><td>Attendance, Feb 19</td><td>Feb 19</td><td class="status-graded">Graded</td><td class="score">1 <span class="score-max">/ 1</span></td><td><span class="pct pct-A">✓</span></td></tr>
+        <tr><td class="item-name">Attendance, Feb 26 <span class="late-flag">ABSENT</span></td><td>Feb 26</td><td class="status-graded">Graded</td><td class="score">0 <span class="score-max">/ 1</span></td><td><span class="pct pct-zero">✗ Absent</span></td></tr>
+        <tr><td>Attendance, March 5</td><td>Mar 5</td><td class="status-graded">Graded</td><td class="score">1 <span class="score-max">/ 1</span></td><td><span class="pct pct-A">✓</span></td></tr>
+        <tr><td class="item-name">Attendance, March 12 <span class="late-flag">ABSENT</span></td><td>Mar 12</td><td class="status-graded">Graded</td><td class="score">0 <span class="score-max">/ 1</span></td><td><span class="pct pct-zero">✗ Absent</span></td></tr>
+        <tr><td class="item-name">Attendance, March 26 <span class="late-flag">ABSENT</span></td><td>Mar 26</td><td class="status-graded">Graded</td><td class="score">0 <span class="score-max">/ 1</span></td><td><span class="pct pct-zero">✗ Absent</span></td></tr>
+        <tr><td>Attendance, Apr 2</td><td>Apr 2</td><td class="status-notgraded">Not graded yet</td><td class="score">— <span class="score-max">/ 1</span></td><td><span class="pct pct-pending">Pending</span></td></tr>
+        <tr><td>Attendance, Apr 9</td><td>Apr 9</td><td class="status-unopened">Future</td><td class="score">— <span class="score-max">/ 1</span></td><td><span class="pct pct-pending">Future</span></td></tr>
+        <tr><td>Attendance, Apr 16</td><td>Apr 16</td><td class="status-unopened">Future</td><td class="score">— <span class="score-max">/ 1</span></td><td><span class="pct pct-pending">Future</span></td></tr>
+        <tr class="cat-row"><td colspan="5">Upcoming / Ungraded</td></tr>
+        <tr>
+          <td class="item-name">Individual Hypothesis Assignment <span class="late-flag">DUE TODAY</span></td>
+          <td>4/4/26 (EDT) = 4/3 11:59pm CST</td>
+          <td class="status-unopened">Not submitted</td>
+          <td class="score">— <span class="score-max">/ ?</span></td>
+          <td><span class="pct pct-zero">⚠ Due tonight</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Professional Development 5</td>
+          <td>4/11/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 5</span></td>
+          <td><span class="pct pct-pending">Due 4/11</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Professional Development 6</td>
+          <td>4/11/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ 5</span></td>
+          <td><span class="pct pct-pending">Due 4/11</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Student Success Analysis</td>
+          <td>4/18/26</td>
+          <td class="status-unopened">Not started</td>
+          <td class="score">— <span class="score-max">/ ?</span></td>
+          <td><span class="pct pct-pending">Due 4/18</span></td>
+        </tr>
+        <tr>
+          <td class="item-name">Final Project</td>
+          <td>TBD (est. 4/17)</td>
+          <td class="status-notgraded">Not graded</td>
+          <td class="score">— <span class="score-max">/ ?</span></td>
+          <td><span class="pct pct-pending">TBD</span></td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3">Current Total Grade (BB)</td>
+          <td class="score">55 <span class="score-max">/ 69</span></td>
+          <td><span class="pct pct-C">79.7% · B–</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="crosscheck">
+      <h4>Advisor Note vs. Blackboard</h4>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>Grade discrepancy:</strong> Advisor says <strong>B+</strong>. BB currently shows <strong>55/69 = 79.7% = B–</strong>. This is a meaningful gap. The 69 pts likely does not include all future assignments — as remaining items are graded the denominator will grow. The "B+" claim may reflect the instructor's own calculation including curve or participation. <strong>Flag for manual verification.</strong></span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Hypothesis Assignment due today (4/3):</strong> BB shows item exists, not yet submitted. Advisor says due "Friday 4/3" — confirmed (4/4 EDT = 4/3 11:59pm CST).</span></div>
+      <div class="crosscheck-row"><span class="icon-info">ℹ</span><span><strong>Hypothesis steps (read pp 1–2, watch video, complete format, explain reasoning):</strong> These steps are from the ENGR group project folder in BB content — cannot be extracted as structured data, only visible in outline. Extension can link to the folder but cannot parse the PDF.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>PD 5 and 6 due 4/10 (4/11 EDT):</strong> Confirmed — both show "Unopened · Due 4/11/26" in BB.</span></div>
+      <div class="crosscheck-row"><span class="icon-diff">✗</span><span><strong>"Raw Data Assignment due 4/10":</strong> Advisor mentions this. BB does NOT show a "Raw Data Assignment" as a separate gradebook item. May be part of the Final Project folder, or not yet entered by Monk. <strong>Cannot verify — flag as untrackable.</strong></span></div>
+      <div class="crosscheck-row"><span class="icon-info">ℹ</span><span><strong>"Group data collection in class on 4/9":</strong> In-class activity — not a BB gradable item. Cannot track via extension.</span></div>
+      <div class="crosscheck-row"><span class="icon-match">✓</span><span><strong>Final Report due ~4/17:</strong> BB shows "Final Project · Not graded" with no due date entered yet. Advisor says 4/17. Extension should display "est. 4/17 per advisor note" until BB is updated.</span></div>
+      <div class="crosscheck-row"><span class="icon-warn">⚠</span><span><strong>Attendance concern:</strong> 4 absences recorded (Feb 5, Feb 26, Mar 12, Mar 26). Each is 0/1. These directly impact the 55/69 total — they account for 4 of the 14 missing points.</span></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-size:12px;color:var(--gray);line-height:1.8;">
+    <strong>Data Sources:</strong> Blackboard Ultra (ualearn.blackboard.com) + WebAssign (webassign.net via LTI) · Live read April 3, 2026<br>
+    <strong>Extension:</strong> RangeKeeper v0.2.0 · jomhhkompafdjiekgcddcaaldgmbfkjh · Student: Massimo McRae (mmcacciatore@crimson.ua.edu)<br>
+    <strong>Advisor notes cross-checked:</strong> EN-103 (2 items) · REL-100 (5 items) · UA-101 (2 items) · MATH-125 (5 items) · ENGR-101 (8 items) · Total: 22 advisor claims verified
+  </div>
+
+</div>
+</body>
+</html>
